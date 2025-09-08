@@ -149,7 +149,7 @@ if (tournamentState.currentTeamIndex === 0) {
 
 #### Alternating (Чередующийся)
 ```javascript
-// Определение команды и игрока
+// Определение команды и игрока по номеру хода
 const teamIndex = tournamentState.currentPlayerIndex % 2;
 const playerIndexInTeam = Math.floor(tournamentState.currentPlayerIndex / 2);
 
@@ -201,7 +201,8 @@ function getWordsForCurrentSource(category, count) {
         // Берем только неиспользованные слова
         const remaining = CUSTOM_WORDS.filter(w => !CUSTOM_WORDS_USED.has(w));
         if (remaining.length === 0) {
-            // Все слова использованы
+            // Все слова использованы — показываем уведомление и возвращаем заглушки
+            showNotification('Слова в пользовательском пакете закончились. Очистите пакет или загрузите новый.');
             return Array(Math.min(count, CUSTOM_WORDS.length)).fill('СЛОВО');
         }
         const shuffled = [...remaining].sort(() => 0.5 - Math.random());
