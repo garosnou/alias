@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alias - Игра в слова</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Главное меню -->
+    <div id="main-menu" class="screen active">
+        <div class="container">
+            <div class="logo">
+                <h1>ALIAS</h1>
+                <p class="subtitle">Игра в слова</p>
+            </div>
+            
+            <div class="menu-buttons">
+                <button class="btn btn-primary" onclick="startGame()">Начать игру</button>
+                <button class="btn btn-primary" onclick="showTournamentSetup()">Турнирный режим</button>
+                <button class="btn btn-primary" onclick="showCompetitiveSetup()">Соревновательный режим</button>
+                <button class="btn btn-secondary" onclick="showSettings()">Настройки</button>
+                <button class="btn btn-secondary" onclick="showRules()">Правила</button>
+            </div>
+            
+            <div class="pack-info" id="pack-info" style="display: none;">
+                <h3>Информация</h3>
+                <p id="pack-info-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Настройки -->
+    <div id="settings" class="screen">
+        <div class="container">
+            <h2>Настройки игры</h2>
+            
+            <div class="settings-group">
+                <label>Источник слов:</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="word-source" id="source-builtin" value="builtin" checked> Встроенные</label>
+                    <label><input type="radio" name="word-source" id="source-custom" value="custom"> Пользовательские</label>
+                </div>
+                <p class="hint">Пользовательские слова: выберите файл <code>.txt</code> с одним словом в строке.</p>
+            </div>
+
+            <div class="settings-group" id="custom-pack-uploader" style="display:none;">
+                <label>Загрузка файла со словами:</label>
+                <input type="file" id="word-pack-input" accept=".txt">
+                <div class="uploader-buttons">
+                    <button class="btn btn-primary" id="import-pack-btn">Загрузить файл</button>
+                    <button class="btn btn-secondary" id="clear-pack-btn">Очистить слова</button>
+                </div>
+                <div class="pack-status" id="custom-pack-status">Файл не загружен</div>
+            </div>
+            
+            <div class="settings-group">
+                <label for="game-time">Время раунда:</label>
+                <select id="game-time">
+                    <option value="30">30 секунд</option>
+                    <option value="60" selected>60 секунд</option>
+                    <option value="90">90 секунд</option>
+                    <option value="120">120 секунд</option>
+                </select>
+            </div>
+            
+            <div class="settings-group">
+                <label for="words-count">Количество слов:</label>
+                <select id="words-count">
+                    <option value="10">10 слов</option>
+                    <option value="20" selected>20 слов</option>
+                    <option value="30">30 слов</option>
+                    <option value="50">50 слов</option>
+                </select>
+            </div>
+            
+            <div class="settings-group" id="category-selector">
+                <label for="category">Категория слов:</label>
+                <select id="category">
+                    <option value="general" selected>Общие слова</option>
+                    <option value="professions">Профессии</option>
+                    <option value="animals">Животные</option>
+                    <option value="sport">Спорт</option>
+                    <option value="food">Еда</option>
+                    <option value="cities">Города</option>
+                </select>
+            </div>
+            
+            <div class="settings-buttons">
+                <button class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Назад</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правила -->
+    <div id="rules" class="screen">
+        <div class="container">
+            <h2>Правила игры</h2>
+            
+            <div class="rules-content">
+                <h3>Как играть:</h3>
+                <ul>
+                    <li>Объясняйте слова своей команде за отведенное время</li>
+                    <li>Нельзя использовать однокоренные слова</li>
+                    <li>Нельзя показывать жестами или рисовать</li>
+                    <li>Нажимайте "Правильно" если слово угадано</li>
+                    <li>Нажимайте "Пропустить" если слово сложное</li>
+                </ul>
+                
+                <h3>Примеры объяснений:</h3>
+                <ul>
+                    <li><strong>КОШКА</strong> - "Домашнее животное, которое мурлычет"</li>
+                    <li><strong>ТЕЛЕФОН</strong> - "Устройство для звонков"</li>
+                    <li><strong>ПОГОДА</strong> - "То, что показывает термометр"</li>
+                </ul>
+                
+                <h3>Подсчет очков:</h3>
+                <ul>
+                    <li>Правильный ответ: +1 очко</li>
+                    <li>Пропущенное слово: 0 очков</li>
+                </ul>
+            </div>
+            
+            <button class="btn btn-primary" onclick="showMainMenu()">Понятно</button>
+        </div>
+    </div>
+
+    <!-- Игровой экран -->
+    <div id="game-screen" class="screen">
+        <div class="container">
+            <div id="competitive-prep" style="display:none;" class="competitive-prep">
+                <div class="prep-content">
+                    <div class="prep-title">Подготовка</div>
+                    <div class="prep-player" id="prep-player-name"></div>
+                    <div class="prep-countdown" id="prep-countdown">3</div>
+                </div>
+            </div>
+            <div class="game-header">
+                <div class="timer-container">
+                    <div class="timer" id="timer">60</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+                
+                <div class="game-stats">
+                    <div class="stat">
+                        <span class="stat-label">Слово:</span>
+                        <span class="stat-value" id="current-word-number">1</span>/<span id="total-words">20</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Очки:</span>
+                        <span class="stat-value" id="current-score">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="word-display">
+                <div class="word" id="current-word">Нажмите "Начать"</div>
+            </div>
+            
+            <div class="game-controls">
+                <button class="btn btn-success" onclick="correctAnswer()" id="correct-btn">
+                    <span class="btn-icon">✓</span>
+                    Правильно
+                </button>
+                <button class="btn btn-danger" onclick="skipWord()" id="skip-btn">
+                    <span class="btn-icon">✗</span>
+                    Пропустить
+                </button>
+            </div>
+            
+            <div class="game-actions">
+                <button class="btn btn-secondary" onclick="pauseGame()" id="pause-btn">Пауза</button>
+                <button class="btn btn-secondary" onclick="endGame()" id="end-btn">Завершить</button>
+            </div>
+
+            <div id="competitive-scoreboard" class="competitive-scoreboard" style="display:none;">
+                <h3>Таблица игроков</h3>
+                <div class="competitive-actions">
+                    <button class="btn btn-primary" id="competitive-start-btn" onclick="startCompetitive()">Начать раунд</button>
+                </div>
+                <div id="competitive-players-list"></div>
+                <div class="competitive-add-form">
+                    <input type="text" id="competitive-player-name" placeholder="Имя игрока">
+                    <button class="btn btn-primary btn-small" onclick="addCompetitivePlayerFromInput()">Добавить</button>
+                </div>
+                <div class="competitive-actions">
+                    <button class="btn btn-secondary" id="competitive-end-btn" onclick="endCompetitiveGame()">Завершить игру</button>
+                    <button class="btn btn-danger" id="competitive-reset-btn" onclick="resetCompetitive()">Сброс</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экран паузы -->
+    <div id="pause-screen" class="screen">
+        <div class="container">
+            <h2>Игра на паузе</h2>
+            <div class="pause-stats">
+                <p>Время: <span id="pause-time"></span></p>
+                <p>Очки: <span id="pause-score"></span></p>
+                <p>Слов: <span id="pause-words"></span></p>
+            </div>
+            <div class="pause-buttons">
+                <button class="btn btn-primary" onclick="resumeGame()">Продолжить</button>
+                <button class="btn btn-secondary" onclick="endGame()">Завершить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты -->
+    <div id="results" class="screen">
+        <div class="container">
+            <h2>Результаты игры</h2>
+            
+            <div class="results-stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="final-score">0</div>
+                    <div class="stat-label">Общий счет</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="correct-answers">0</div>
+                    <div class="stat-label">Правильных</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="skipped-words">0</div>
+                    <div class="stat-label">Пропущено</div>
+                </div>
+            </div>
+            
+            <div class="results-details">
+                <p>Время игры: <span id="game-time-result"></span></p>
+                <p>Категория: <span id="game-category-result"></span></p>
+            </div>
+            
+            <div class="results-buttons">
+                <button class="btn btn-primary" onclick="newGame()">Новый раунд</button>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
+            </div>
+            
+            <div class="words-lists">
+                <div class="words-section">
+                    <h3>Отгаданные слова (<span id="correct-count">0</span>)</h3>
+                    <div class="words-container" id="correct-words-list"></div>
+                </div>
+                
+                <div class="words-section">
+                    <h3>Пропущенные слова (<span id="skipped-count">0</span>)</h3>
+                    <div class="words-container" id="skipped-words-list"></div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Настройка турнира -->
+    <div id="tournament-setup" class="screen">
+        <div class="container">
+            <h2>Настройка турнира</h2>
+            
+            <div class="tournament-settings">
+                <div class="settings-group">
+                    <label>Режим игры:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="game-mode" value="sequential" checked> Поочередно все игроки команды</label>
+                        <label><input type="radio" name="game-mode" value="alternating"> Игроки команд через одного</label>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <label for="tournament-game-time">Время раунда:</label>
+                    <select id="tournament-game-time">
+                        <option value="30">30 секунд</option>
+                        <option value="60" selected>60 секунд</option>
+                        <option value="90">90 секунд</option>
+                        <option value="120">120 секунд</option>
+                    </select>
+                </div>
+                
+                <div class="settings-group">
+                    <label for="tournament-words-count">Количество слов:</label>
+                    <select id="tournament-words-count">
+                        <option value="10">10 слов</option>
+                        <option value="20" selected>20 слов</option>
+                        <option value="30">30 слов</option>
+                        <option value="50">50 слов</option>
+                    </select>
+                </div>
+                
+                
+            </div>
+            
+            <div class="teams-section">
+                <h3>Команды (максимум 8)</h3>
+                <div id="teams-list"></div>
+                
+                <div class="add-team-form">
+                    <h4>Добавить команду</h4>
+                    <div class="form-group">
+                        <label for="team-name">Название команды:</label>
+                        <input type="text" id="team-name" placeholder="Введите название команды">
+                    </div>
+                    <div class="form-group">
+                        <label for="team-players">Игроки (через запятую):</label>
+                        <input type="text" id="team-players" placeholder="Игрок 1, Игрок 2, Игрок 3">
+                    </div>
+                    <button class="btn btn-primary" onclick="addTeamFromForm()">Добавить команду</button>
+                </div>
+            </div>
+            
+            <div class="tournament-buttons">
+                <button class="btn btn-primary" onclick="startTournament()" id="start-tournament-btn" disabled>Начать турнир</button>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Назад</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экран матча турнира -->
+    <div id="tournament-match" class="screen">
+        <div class="container">
+            <div id="match-info">
+                <h3>Матч</h3>
+                <div class="match-teams">
+                    <div class="team-vs">
+                        <span class="team-name">Команда 1</span>
+                        <span class="vs">VS</span>
+                        <span class="team-name">Команда 2</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="current-player-info">
+                <h3>Текущий игрок</h3>
+                <p>Игрок: Имя</p>
+                <p>Раунд: 1/3</p>
+            </div>
+            
+            <div class="match-controls">
+                <button class="btn btn-primary" onclick="startNextPlayer()">Начать игру игрока</button>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Отменить турнир</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты матча -->
+    <div id="match-results" class="screen">
+        <div class="container">
+            <div id="match-result">
+                <h3>Результаты матча</h3>
+                <div class="match-result">
+                    <div class="team-result">
+                        <span class="team-name">Команда 1</span>
+                        <span class="team-score">0</span>
+                    </div>
+                    <div class="team-result">
+                        <span class="team-name">Команда 2</span>
+                        <span class="team-score">0</span>
+                    </div>
+                </div>
+                <div class="winner">
+                    <h4>Победитель: Команда 1</h4>
+                </div>
+            </div>
+            <div id="next-match-announcement" class="next-match-announcement"></div>
+            <div id="player-words-breakdown" class="player-words-breakdown"></div>
+            <div class="match-export">
+                <button class="btn btn-secondary" onclick="exportMatchResults()">Экспорт результатов</button>
+            </div>
+            
+            <div class="match-buttons">
+                <button class="btn btn-primary" onclick="continueTournament()">Следующий матч</button>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты турнира -->
+    <div id="tournament-results" class="screen">
+        <div class="container">
+            <div id="tournament-winner">
+                <h2>🏆 Победитель турнира</h2>
+                <div class="winner-team">
+                    <h3>Команда</h3>
+                    <p>Игроки: Игрок 1, Игрок 2</p>
+                </div>
+            </div>
+            
+            <div class="tournament-buttons">
+                <button class="btn btn-primary" onclick="showMainMenu()">Главное меню</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты соревновательного режима -->
+    <div id="competitive-results" class="screen">
+        <div class="container">
+            <h2>Результаты игры</h2>
+            <div id="competitive-results-list"></div>
+            <div class="match-buttons">
+                <button class="btn btn-primary" onclick="showCompetitiveSetup()">Новый матч</button>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="words.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

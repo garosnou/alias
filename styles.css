@@ -1,0 +1,1034 @@
+/* Сброс стилей и базовые настройки */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Контейнеры и экраны */
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.screen {
+    display: none;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* Логотип */
+.logo h1 {
+    font-size: 4rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.1em;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 3rem;
+}
+
+/* Кнопки */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    min-width: 200px;
+    margin: 0.5rem;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+}
+
+.btn-icon {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Меню кнопок */
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* Информация о последней игре */
+.last-game-info {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.last-game-info h3 {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.last-game-info p {
+    color: rgba(255,255,255,0.9);
+}
+
+/* Настройки */
+.settings-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.settings-group label {
+    display: block;
+    color: white;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.settings-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.9);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.settings-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+/* Радио-группа и подсказки */
+.radio-group {
+    display: flex;
+    gap: 1rem;
+    color: white;
+}
+
+.radio-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 500;
+}
+
+.hint {
+    color: rgba(255,255,255,0.85);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Uploader */
+#custom-pack-uploader {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.uploader-buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.pack-status {
+    margin-top: 0.75rem;
+    color: rgba(255,255,255,0.95);
+}
+
+/* Правила */
+.rules-content {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 2rem 0;
+    text-align: left;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.rules-content h3 {
+    color: white;
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+}
+
+.rules-content h3:first-child {
+    margin-top: 0;
+}
+
+.rules-content ul {
+    color: rgba(255,255,255,0.9);
+    margin-left: 1.5rem;
+}
+
+.rules-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* Игровой экран */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.timer-container {
+    flex: 1;
+    min-width: 200px;
+}
+
+.timer {
+    font-size: 3rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    transition: width 1s linear;
+    border-radius: 4px;
+}
+
+.game-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    font-weight: 500;
+}
+
+.stat-label {
+    opacity: 0.8;
+}
+
+.stat-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Отображение слова */
+.word-display {
+    background: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.word {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* Игровые кнопки */
+.game-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.game-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* Экран паузы */
+.pause-stats {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 2rem 0;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.pause-stats p {
+    color: white;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.pause-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* Результаты */
+.results-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.stat-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .stat-label {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+}
+
+.results-details {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.results-details p {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+/* Списки слов в результатах */
+.words-lists {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.words-section {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.words-section h3 {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.words-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    min-height: 60px;
+    align-items: center;
+}
+
+.word-item {
+    display: inline-block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+    min-width: 80px;
+}
+
+.word-item.correct {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.word-item.skipped {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+    box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+}
+
+.no-words {
+    color: rgba(255,255,255,0.7);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.results-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Заголовки */
+h2 {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    .logo h1 {
+        font-size: 3rem;
+    }
+    
+    .word {
+        font-size: 2rem;
+    }
+    
+    .timer {
+        font-size: 2.5rem;
+    }
+    
+    .game-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .game-controls {
+        flex-direction: column;
+    }
+    
+    .btn {
+        min-width: 150px;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    .results-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .words-lists {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .word-item {
+        min-width: 70px;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo h1 {
+        font-size: 2.5rem;
+    }
+    
+    .word {
+        font-size: 1.5rem;
+    }
+    
+    .timer {
+        font-size: 2rem;
+    }
+    
+    .results-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn {
+        min-width: 120px;
+        padding: 0.6rem 1.2rem;
+        font-size: 1rem;
+    }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.screen.active {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.word {
+    animation: pulse 2s infinite;
+}
+
+/* Состояния кнопок */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Уведомления */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.95);
+    color: #333;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Турнирные стили */
+.tournament-settings {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.teams-section {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.teams-section h3 {
+    color: white;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+}
+
+#teams-list {
+    margin-bottom: 2rem;
+}
+
+.team-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.team-info h4 {
+    color: white;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.team-info p {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.9rem;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    min-width: auto;
+}
+
+/* Соревновательный режим */
+.competitive-scoreboard {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+#competitive-players-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.competitive-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+}
+
+.competitive-player-name {
+    color: white;
+    font-weight: 600;
+}
+
+.competitive-player-score {
+    color: #FFD700;
+    font-weight: 700;
+}
+
+.competitive-player-actions .btn-small {
+    margin-left: 0.5rem;
+}
+
+.competitive-player-row.active {
+    box-shadow: 0 0 0 2px rgba(255,215,0,0.5);
+    background: rgba(255,255,255,0.12);
+}
+
+.competitive-add-form {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.competitive-add-form input {
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.competitive-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 0.75rem;
+}
+
+#competitive-results-list {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    text-align: left;
+}
+
+.competitive-results-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+.competitive-results-row:last-child {
+    border-bottom: none;
+}
+
+.competitive-prep {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 900;
+}
+
+.prep-content {
+    background: rgba(255,255,255,0.95);
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    text-align: center;
+    min-width: 260px;
+}
+
+.prep-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.prep-player {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.prep-countdown {
+    font-size: 3rem;
+    font-weight: 800;
+}
+
+.add-team-form {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.add-team-form h4 {
+    color: white;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    color: white;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 1rem;
+}
+
+.form-group input::placeholder {
+    color: rgba(255,255,255,0.6);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+.tournament-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.tournament-buttons .btn {
+    min-width: 180px;
+}
+
+/* Экран матча */
+.match-teams {
+    margin: 2rem 0;
+}
+
+.team-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.team-name {
+    font-weight: 600;
+    padding: 1rem 2rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.vs {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #FFD700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.match-score {
+    margin: 1.5rem 0;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+}
+
+.team-score {
+    padding: 0.8rem 1.5rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    margin: 0 0.5rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.score-separator {
+    font-size: 1.5rem;
+    color: #FFD700;
+    margin: 0 1rem;
+    font-weight: 700;
+}
+
+#current-player-info {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 2rem 0;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+#current-player-info h3 {
+    color: white;
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+}
+
+#current-player-info p {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.match-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Результаты матча */
+.match-result {
+    display: flex;
+    justify-content: space-around;
+    margin: 2rem 0;
+    gap: 2rem;
+}
+
+.team-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    min-width: 150px;
+}
+
+.team-result .team-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.team-result .team-score {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #4CAF50;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.winner {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.winner h4 {
+    color: #FFD700;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.match-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Результаты турнира */
+.winner-team {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 2rem 0;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    text-align: center;
+}
+
+.winner-team h3 {
+    color: #FFD700;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.winner-team p {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+}
+
+.tournament-results .btn {
+    min-width: 200px;
+}
+
+/* Адаптивность для турнирного режима */
+@media (max-width: 768px) {
+    .team-vs {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .match-result {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .team-result {
+        min-width: 200px;
+    }
+    
+    .tournament-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .tournament-buttons .btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}
