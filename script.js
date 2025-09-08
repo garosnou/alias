@@ -7,7 +7,7 @@ let gameState = {
     currentWordIndex: 0,
     correctAnswers: 0,
     skippedWords: 0,
-    totalWords: 20,
+    totalWords: 0,
     timeLimit: 60,
     timeRemaining: 60,
     words: [],
@@ -22,7 +22,6 @@ let gameState = {
 // Настройки по умолчанию
 let settings = {
     gameTime: 60,
-    wordsCount: 20,
     category: 'general',
     wordSource: 'builtin' // builtin | custom
 };
@@ -197,7 +196,6 @@ function loadSettings() {
 // Сохранение настроек в localStorage
 function saveSettings() {
     settings.gameTime = parseInt(document.getElementById('game-time').value);
-    settings.wordsCount = parseInt(document.getElementById('words-count').value);
     settings.wordSource = document.getElementById('source-custom').checked ? 'custom' : 'builtin';
     
     // Сохраняем категорию только для встроенных слов
@@ -216,7 +214,6 @@ function saveSettings() {
 // Обновление UI настроек
 function updateSettingsUI() {
     document.getElementById('game-time').value = settings.gameTime;
-    document.getElementById('words-count').value = settings.wordsCount;
     
     // Восстанавливаем категорию только для встроенных слов
     if (settings.wordSource === 'builtin' && settings.category !== 'custom') {
@@ -247,7 +244,73 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.add('active');
 }
 
-function showMainMenu() { showScreen('main-menu'); }
+// Сброс UI и таймеров перед сменой режима/экрана
+function resetGameUI() {
+    // Останавливаем любые таймеры
+    if (gameState && gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+        gameState.timerInterval = null;
+    }
+    if (competitiveState && competitiveState.prepTimer) {
+        clearInterval(competitiveState.prepTimer);
+        competitiveState.prepTimer = null;
+    }
+
+    // Сбрасываем базовое состояние игры (не запущена)
+    gameState.isPlaying = false;
+    gameState.isPaused = false;
+    gameState.currentWordIndex = 0;
+    gameState.correctAnswers = 0;
+    gameState.skippedWords = 0;
+    gameState.score = 0;
+    gameState.words = [];
+    gameState.correctWords = [];
+    gameState.skippedWordsList = [];
+    gameState.timeLimit = settings.gameTime;
+    gameState.timeRemaining = settings.gameTime;
+
+    // Сбрасываем визуальные элементы игрового экрана
+    const timerElement = document.getElementById('timer');
+    const progressElement = document.getElementById('progress-fill');
+    const scoreEl = document.getElementById('current-score');
+    const wordEl = document.getElementById('current-word');
+    const wordNumEl = document.getElementById('current-word-number');
+    const correctWordsContainer = document.getElementById('correct-words-list');
+    const skippedWordsContainer = document.getElementById('skipped-words-list');
+    const correctCount = document.getElementById('correct-count');
+    const skippedCount = document.getElementById('skipped-count');
+
+    if (timerElement) timerElement.textContent = String(settings.gameTime);
+    if (progressElement) {
+        progressElement.style.width = '100%';
+        progressElement.style.background = '';
+    }
+    if (scoreEl) scoreEl.textContent = '0';
+    if (wordEl) wordEl.textContent = '';
+    if (wordNumEl) wordNumEl.textContent = '0';
+    if (correctWordsContainer) correctWordsContainer.innerHTML = '';
+    if (skippedWordsContainer) skippedWordsContainer.innerHTML = '';
+    if (correctCount) correctCount.textContent = '0';
+    if (skippedCount) skippedCount.textContent = '0';
+
+    // Скрываем подготовку
+    const prep = document.getElementById('competitive-prep');
+    if (prep) prep.style.display = 'none';
+
+    // Скрываем/показываем соревновательное табло по необходимости
+    const sb = document.getElementById('competitive-scoreboard');
+    if (sb) sb.style.display = 'none';
+}
+
+function showMainMenu() {
+    // При входе в главное меню выходим из соревновательного режима
+    competitiveState.isCompetitiveMode = false;
+    const sb = document.getElementById('competitive-scoreboard');
+    if (sb) sb.style.display = 'none';
+    const prep = document.getElementById('competitive-prep');
+    if (prep) prep.style.display = 'none';
+    showScreen('main-menu');
+}
 function showSettings() { updateSettingsUI(); showScreen('settings'); }
 function showRules() { showScreen('rules'); }
 
@@ -268,26 +331,24 @@ function startGame() {
     }
 
     // Определяем настройки для игры
-    let gameTime, wordsCount, category;
+    let gameTime, category;
     
     if (tournamentState.isTournamentMode) {
         // Используем настройки турнира; источник слов и категория берем из общих настроек
         gameTime = parseInt(document.getElementById('tournament-game-time').value);
-        wordsCount = parseInt(document.getElementById('tournament-words-count').value);
         category = settings.wordSource === 'builtin' ? settings.category : 'custom';
         // режим игры фиксируется при старте турнира
     } else if (competitiveState.isCompetitiveMode) {
         gameTime = settings.gameTime;
-        wordsCount = settings.wordsCount;
         category = settings.category;
     } else {
         // Используем обычные настройки
         gameTime = settings.gameTime;
-        wordsCount = settings.wordsCount;
         category = settings.category;
     }
 
-    const words = getWordsForCurrentSource(category, wordsCount);
+    const WORDS_BATCH_SIZE = 50;
+    const words = getWordsForCurrentSource(category, WORDS_BATCH_SIZE);
 
     gameState = {
         isPlaying: true,
@@ -295,7 +356,7 @@ function startGame() {
         currentWordIndex: 0,
         correctAnswers: 0,
         skippedWords: 0,
-        totalWords: wordsCount,
+        totalWords: 0,
         timeLimit: gameTime,
         timeRemaining: gameTime,
         words: words,
@@ -403,7 +464,6 @@ function showCurrentWord() {
         const wordElement = document.getElementById('current-word');
         wordElement.textContent = gameState.words[gameState.currentWordIndex];
         document.getElementById('current-word-number').textContent = gameState.currentWordIndex + 1;
-        document.getElementById('total-words').textContent = gameState.totalWords;
     }
 }
 
@@ -433,8 +493,14 @@ function skipWord() {
 // Переход к следующему слову
 function nextWord() {
     gameState.currentWordIndex++;
-    if (gameState.currentWordIndex >= gameState.words.length) { endGame(); }
-    else { showCurrentWord(); updateGameUI(); }
+    if (gameState.currentWordIndex >= gameState.words.length) {
+        const WORDS_BATCH_SIZE = 50;
+        const more = getWordsForCurrentSource(gameState.category, WORDS_BATCH_SIZE) || [];
+        if (!more.length) { endGame(); return; }
+        gameState.words.push(...more);
+    }
+    showCurrentWord();
+    updateGameUI();
 }
 
 // Подсчет очков за слово
@@ -448,7 +514,7 @@ function pauseGame() {
     gameState.isPaused = true;
     document.getElementById('pause-time').textContent = gameState.timeRemaining + ' сек';
     document.getElementById('pause-score').textContent = gameState.score;
-    document.getElementById('pause-words').textContent = gameState.currentWordIndex + '/' + gameState.totalWords;
+    document.getElementById('pause-words').textContent = gameState.currentWordIndex;
     showScreen('pause-screen');
 }
 
@@ -512,7 +578,7 @@ function saveGameResults(score, correct, skipped, duration) {
         score: score,
         correctAnswers: correct,
         skippedWords: skipped,
-        totalWords: gameState.totalWords,
+        totalWords: gameState.currentWordIndex,
         timeLimit: gameState.timeLimit,
         actualTime: duration,
         category: gameState.category,
@@ -1404,6 +1470,8 @@ window.exportMatchResults = exportMatchResults;
 // -------------------------
 
 function showCompetitiveSetup() {
+    // Перед входом в соревновательный режим очищаем следы предыдущей игры
+    resetGameUI();
     competitiveState.isCompetitiveMode = true;
     if (!Array.isArray(competitiveState.players)) competitiveState.players = [];
     renderCompetitivePlayers();
