@@ -313,8 +313,11 @@ function startGame() {
         // перед стартом даем 3 секунды подготовки
         startCompetitivePreparation();
     } else {
-        startTimer();
-        showCurrentWord();
+        // Универсальная подготовка перед началом раунда во всех режимах
+        startRoundPreparation(3, null, () => {
+            startTimer();
+            showCurrentWord();
+        });
     }
 }
 
@@ -348,6 +351,35 @@ function startTimer() {
             gameState.timeRemaining--;
             updateTimer();
             if (gameState.timeRemaining <= 0) { endGame(); }
+        }
+    }, 1000);
+}
+
+// Универсальная подготовка к раунду (обратный отсчет перед стартом)
+function startRoundPreparation(seconds, playerName, onComplete) {
+    const prep = document.getElementById('competitive-prep');
+    const nameEl = document.getElementById('prep-player-name');
+    const countdownEl = document.getElementById('prep-countdown');
+    if (nameEl) nameEl.textContent = playerName ? String(playerName) : '';
+    let left = Math.max(0, parseInt(seconds, 10) || 0);
+    if (countdownEl) countdownEl.textContent = String(left);
+    if (prep) prep.style.display = '';
+    if (competitiveState && competitiveState.prepTimer) {
+        clearInterval(competitiveState.prepTimer);
+    }
+    if (left === 0) {
+        if (prep) prep.style.display = 'none';
+        if (typeof onComplete === 'function') onComplete();
+        return;
+    }
+    competitiveState.prepTimer = setInterval(() => {
+        left--;
+        if (countdownEl) countdownEl.textContent = String(Math.max(left, 0));
+        if (left <= 0) {
+            clearInterval(competitiveState.prepTimer);
+            competitiveState.prepTimer = null;
+            if (prep) prep.style.display = 'none';
+            if (typeof onComplete === 'function') onComplete();
         }
     }, 1000);
 }
