@@ -462,8 +462,11 @@ function updateTimer() {
 function showCurrentWord() {
     if (gameState.currentWordIndex < gameState.words.length) {
         const wordElement = document.getElementById('current-word');
-        wordElement.textContent = gameState.words[gameState.currentWordIndex];
+        const current = gameState.words[gameState.currentWordIndex];
+        wordElement.textContent = current;
         document.getElementById('current-word-number').textContent = gameState.currentWordIndex + 1;
+        // Немедленно помечаем слово как использованное (для пользовательских пакетов)
+        markWordAsUsedImmediate(current);
     }
 }
 
@@ -1402,6 +1405,20 @@ function markWordsAsUsed() {
     
     // Обновляем информацию в UI
     updateMainInfoBanner();
+}
+
+// Немедленно помечаем конкретное слово как использованное (при показе)
+function markWordAsUsedImmediate(word) {
+    if (!word || word === 'СЛОВО') return;
+    if (settings.wordSource !== 'custom' || !CUSTOM_WORDS) return;
+    if (!CUSTOM_WORDS_USED) CUSTOM_WORDS_USED = new Set();
+    if (!CUSTOM_WORDS_USED.has(word)) {
+        CUSTOM_WORDS_USED.add(word);
+        try {
+            localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED)));
+        } catch (_) {}
+        updateMainInfoBanner();
+    }
 }
 
 // Показ уведомлений
