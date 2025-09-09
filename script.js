@@ -131,6 +131,8 @@ function setupCustomPackControls() {
             updateCustomPackStatus();
             showNotification('Пользовательские слова очищены');
             updateMainInfoBanner();
+            // Сбрасываем состояние игры при очистке словаря
+            resetGameUI();
         });
     }
 
@@ -150,6 +152,9 @@ function updateWordSourceUI() {
     
     sourceCustom.checked = settings.wordSource === 'custom';
     sourceBuiltin.checked = settings.wordSource === 'builtin';
+    
+    // Сбрасываем состояние игры при смене источника слов
+    resetGameUI();
 }
 
 function updateCustomPackStatus() {
@@ -524,8 +529,7 @@ function pauseGame() {
 function resumeGame() { gameState.isPaused = false; showScreen('game-screen'); }
 
 function endGame() {
-    if (!gameState.isPlaying) return; // Предотвращаем повторное завершение
-    
+    // Сбрасываем состояние игры независимо от текущего состояния
     gameState.isPlaying = false;
     gameState.isPaused = false; // Убираем паузу если она была
     
