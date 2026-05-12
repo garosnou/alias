@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alias — экран зала</title>
+    <link rel="stylesheet" href="display.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+    <div id="display-root">
+        <div id="display-idle" class="display-idle" role="status" aria-live="polite" aria-label="Подготовка турнира">
+            <div class="display-idle-glow" aria-hidden="true"></div>
+            <div class="display-idle-card">
+                <h1 class="display-idle-title">Подготовка турнира</h1>
+            </div>
+        </div>
+
+        <div id="display-prep" class="display-prep hidden">
+            <p class="display-prep-label">Подготовка</p>
+            <div class="display-prep-name" id="display-prep-name"></div>
+            <div class="display-prep-count" id="display-prep-count"></div>
+        </div>
+
+        <div id="display-game" class="display-game hidden">
+            <div class="display-top">
+                <div id="display-flexible-banner" class="display-flexible-banner hidden" aria-live="polite"></div>
+                <div class="display-timer-row">
+                    <div class="display-timer" id="display-timer">60</div>
+                </div>
+                <div class="display-progress" aria-hidden="true">
+                    <div class="display-progress-fill" id="display-progress-fill"></div>
+                </div>
+                <div class="display-meta" id="display-meta"></div>
+            </div>
+            <div id="display-comp-banner" class="display-comp-banner hidden" aria-live="polite"></div>
+            <div class="display-word" id="display-word">—</div>
+        </div>
+
+        <div id="display-paused" class="display-paused hidden">Пауза</div>
+
+        <div id="display-tournament-wait" class="display-tournament-wait hidden">
+            <p class="display-tournament-kicker">Турнир</p>
+            <div id="display-tw-classic" class="display-tw-classic">
+                <div id="display-tw-match" class="display-tw-match" aria-live="polite"></div>
+                <div id="display-tw-player" class="display-tw-player" aria-live="polite"></div>
+            </div>
+            <div id="display-ft-call-wrap" class="display-ft-call-wrap hidden" aria-live="polite">
+                <h2 class="display-ft-call-h2" id="display-ft-call-title">Раунд</h2>
+                <p class="display-ft-call-sub" id="display-ft-call-sub"></p>
+                <div class="display-ft-cards" id="display-ft-cards"></div>
+            </div>
+            <div id="display-ft-match-wrap" class="display-ft-match-wrap hidden" aria-live="polite">
+                <p class="display-ft-match-label">Счёт в раунде</p>
+                <div class="display-ft-match-scores" id="display-ft-match-scores"></div>
+                <div class="display-ft-match-next" id="display-ft-match-next"></div>
+            </div>
+        </div>
+
+        <div id="display-results" class="display-results hidden" aria-live="polite">
+            <h2 class="display-results-h2" id="display-results-title">Результаты</h2>
+            <div id="display-results-round" class="display-results-round hidden">
+                <div class="display-results-cards">
+                    <div class="display-res-card">
+                        <div class="display-res-num" id="dr-final">0</div>
+                        <div class="display-res-lbl">Счёт</div>
+                    </div>
+                    <div class="display-res-card">
+                        <div class="display-res-num" id="dr-correct-n">0</div>
+                        <div class="display-res-lbl">Правильно</div>
+                    </div>
+                    <div class="display-res-card">
+                        <div class="display-res-num" id="dr-skipped-n">0</div>
+                        <div class="display-res-lbl">Пропущено</div>
+                    </div>
+                </div>
+                <p class="display-results-meta" id="display-results-meta"></p>
+                <div class="display-results-columns">
+                    <div class="display-results-col">
+                        <h3 class="display-results-h3">Отгаданные</h3>
+                        <div id="dr-correct" class="display-word-tags"></div>
+                    </div>
+                    <div class="display-results-col">
+                        <h3 class="display-results-h3">Пропущенные</h3>
+                        <div id="dr-skipped" class="display-word-tags"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="display-results-match" class="display-results-match hidden">
+                <div class="drm-row">
+                    <div class="drm-team">
+                        <div class="drm-team-name" id="drm-t1n"></div>
+                        <div class="drm-team-score" id="drm-t1s"></div>
+                    </div>
+                    <div class="drm-vs">VS</div>
+                    <div class="drm-team">
+                        <div class="drm-team-name" id="drm-t2n"></div>
+                        <div class="drm-team-score" id="drm-t2s"></div>
+                    </div>
+                </div>
+                <div class="drm-winner" id="drm-winner"></div>
+                <div id="drm-next-wrap" class="drm-next-wrap hidden">
+                    <div class="drm-next-label">Дальше</div>
+                    <div class="drm-next-body" id="drm-next"></div>
+                </div>
+                <div class="drm-breakdown" id="drm-breakdown"></div>
+            </div>
+            <div id="display-results-competitive" class="display-results-competitive hidden">
+                <p class="drc-subtitle" id="drc-subtitle"></p>
+                <div class="drc-list" id="drc-list"></div>
+            </div>
+            <div id="display-results-flexible-round" class="display-results-flexible-round hidden">
+                <div id="display-fr-grid" class="display-fr-grid" role="table" aria-label="Итоги раунда"></div>
+                <p id="display-fr-footnote" class="display-fr-footnote hidden"></p>
+            </div>
+            <div id="display-results-generic" class="display-results-generic hidden">
+                <div class="display-results-pre" id="display-results-body"></div>
+            </div>
+        </div>
+    </div>
+    <div id="display-flash" aria-hidden="true"></div>
+    <script src="display-app.js"></script>
+</body>
+</html>

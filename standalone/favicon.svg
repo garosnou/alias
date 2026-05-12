@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="text" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F3F4F6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Фон с закругленными углами -->
+  <rect x="2" y="2" width="28" height="28" rx="6" ry="6" fill="url(#bg)" stroke="#312E81" stroke-width="1"/>
+  
+  <!-- Буква А -->
+  <path d="M16 6 L10 26 L12 26 L14 20 L18 20 L20 26 L22 26 L16 6 Z M15 16 L17 16 L16 12 L15 16 Z" 
+        fill="url(#text)" 
+        stroke="none"/>
+  
+  <!-- Декоративные элементы -->
+  <circle cx="8" cy="8" r="1.5" fill="url(#text)" opacity="0.6"/>
+  <circle cx="24" cy="8" r="1.5" fill="url(#text)" opacity="0.6"/>
+  <circle cx="8" cy="24" r="1.5" fill="url(#text)" opacity="0.6"/>
+  <circle cx="24" cy="24" r="1.5" fill="url(#text)" opacity="0.6"/>
+</svg>
