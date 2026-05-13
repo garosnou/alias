@@ -52,7 +52,52 @@ html, body {
     justify-content: center;
     width: 100%;
     min-height: 100vh;
-    padding: clamp(72px, 10vh, 120px) 3vw 5vh;
+    padding: clamp(72px, 10vh, 120px) 3vw clamp(100px, 14vh, 160px);
+}
+
+.display-hall-scoreboard {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 2vw, 20px);
+    width: min(96%, 1100px);
+    margin-top: 1.5rem;
+    padding: clamp(12px, 2vw, 20px) clamp(14px, 2.5vw, 28px);
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.display-hall-scoreboard.hidden {
+    display: none;
+}
+
+.display-hall-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: clamp(1rem, 2.2vw, 1.35rem);
+}
+
+.display-hall-pill-name {
+    font-weight: 600;
+    opacity: 0.95;
+}
+
+.display-hall-pill-score {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.display-hall-vs {
+    font-weight: 700;
+    opacity: 0.75;
+    padding: 0 0.25rem;
 }
 
 #display-flash {

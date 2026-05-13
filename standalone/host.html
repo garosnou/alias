@@ -152,6 +152,10 @@
                         <span class="stat-label">Очки:</span>
                         <span class="stat-value" id="current-score">0</span>
                     </div>
+                    <div class="stat" id="host-skip-limit-wrap" style="display:none;">
+                        <span class="stat-label">Пропуски:</span>
+                        <span class="stat-value" id="host-skip-limit-val">0</span>
+                    </div>
                 </div>
             </div>
             
@@ -173,6 +177,10 @@
             <div class="game-actions">
                 <button class="btn btn-secondary" onclick="pauseGame()" id="pause-btn">Пауза</button>
                 <button class="btn btn-secondary" onclick="endGame()" id="end-btn">Завершить</button>
+            </div>
+
+            <div id="host-playing-scoreboard" class="host-playing-scoreboard hidden" aria-live="polite">
+                <div id="host-playing-scoreboard-inner" class="host-playing-scoreboard-inner"></div>
             </div>
 
             <div id="competitive-scoreboard" class="competitive-scoreboard" style="display:none;">
@@ -258,7 +266,7 @@
     <div id="flexible-tournament-setup" class="screen">
         <div class="container">
             <h2>Гибкий турнир</h2>
-            <p class="hint">Создайте команды заранее или добавляйте по ходу. В каждом раунде выберите до <strong>трёх</strong> команд и нажмите «Вызвать команды» — зал увидит состав. В раунде столько <strong>кругов</strong>, сколько игроков у самой большой из выбранных команд: в каждом круге по разу объясняет каждая команда по очереди. У команды меньше игроков — те же игроки снова по кругу (индекс по модулю).</p>
+            <p class="hint">Создайте команды заранее или добавляйте по ходу. Состав и очки сохраняются в браузере до сброса. В каждом раунде выберите до <strong>трёх</strong> команд и нажмите «Вызвать команды» — зал увидит состав. Число <strong>кругов</strong> по умолчанию равно числу игроков у самой большой из выбранных команд (можно задать вручную ниже). У команды меньше игроков — те же игроки снова по кругу.</p>
 
             <div class="tournament-settings">
                 <div class="settings-group">
@@ -269,6 +277,19 @@
                         <option value="90">90 секунд</option>
                         <option value="120">120 секунд</option>
                     </select>
+                </div>
+                <div class="settings-group">
+                    <label for="flexible-max-skips">Макс. пропусков за ход (пусто = без лимита):</label>
+                    <input type="number" id="flexible-max-skips" min="0" max="999" step="1" placeholder="без лимита" class="flexible-num-input">
+                </div>
+                <div class="settings-group">
+                    <label for="flexible-round-circles">Кругов в раунде (пусто = авто по составу, макс. 50):</label>
+                    <input type="number" id="flexible-round-circles" min="1" max="50" step="1" placeholder="авто" class="flexible-num-input">
+                </div>
+                <div class="settings-group">
+                    <label for="flexible-quick-default-players">Игроков в «быстрой» команде:</label>
+                    <input type="number" id="flexible-quick-default-players" min="1" max="20" value="3" class="flexible-num-input">
+                    <p class="hint">Только для кнопки «Быстро добавить» — не связано с числом кругов.</p>
                 </div>
             </div>
 
@@ -286,6 +307,7 @@
                         <input type="text" id="flexible-team-players" placeholder="Игрок 1, Игрок 2">
                     </div>
                     <button type="button" class="btn btn-primary" onclick="addFlexibleTeamFromForm()">Добавить команду</button>
+                    <button type="button" class="btn btn-secondary" onclick="addFlexibleTeamQuick()">Быстро добавить</button>
                 </div>
             </div>
 
@@ -296,6 +318,7 @@
 
             <div class="tournament-buttons">
                 <button type="button" class="btn btn-primary" onclick="callFlexibleTeams()">Вызвать команды</button>
+                <button type="button" class="btn btn-danger" onclick="resetFlexibleTournamentPersisted()">Сброс турнира</button>
                 <button type="button" class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
             </div>
         </div>

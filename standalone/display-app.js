@@ -14,6 +14,7 @@
     var timerRow = document.querySelector('.display-timer-row');
     var progressFill = document.getElementById('display-progress-fill');
     var metaEl = document.getElementById('display-meta');
+    var hallDock = document.getElementById('display-hall-scoreboard');
 
     var resultsEl = document.getElementById('display-results');
     var resultsTitle = document.getElementById('display-results-title');
@@ -326,6 +327,10 @@
         if (displayTournamentWait) displayTournamentWait.classList.add('hidden');
 
         if (phase === 'prep') {
+            if (hallDock) {
+                hallDock.classList.add('hidden');
+                hallDock.textContent = '';
+            }
             prepEl.classList.remove('hidden');
             prepNameEl.textContent = state.prepName || '';
             prepCountEl.textContent = state.prepCountdown || '';
@@ -347,12 +352,20 @@
             (canClassic || canFtCall || canFtMatch);
 
         if (showTournament) {
+            if (hallDock) {
+                hallDock.classList.add('hidden');
+                hallDock.textContent = '';
+            }
             displayTournamentWait.classList.remove('hidden');
             renderTournamentHall(twBoard);
             return;
         }
 
         if (phase === 'paused' || screenId === 'pause-screen') {
+            if (hallDock) {
+                hallDock.classList.add('hidden');
+                hallDock.textContent = '';
+            }
             pausedEl.classList.remove('hidden');
             return;
         }
@@ -405,15 +418,56 @@
                     flexBn.textContent = '';
                 }
             }
-            metaEl.textContent =
-                'Слово ' + (state.wordNumber || 0) + ' · Очки ' + (state.score != null ? state.score : 0);
             if (phase === 'lobby') {
                 metaEl.textContent = 'Ожидание начала раунда';
+            } else {
+                metaEl.textContent =
+                    'Слово ' +
+                    (state.wordNumber || 0) +
+                    ' · Очки ' +
+                    (state.score != null ? state.score : 0) +
+                    (state.skipsRemaining != null && state.maxSkipsAllowed != null
+                        ? ' · Пропуски ' + state.skipsRemaining + '/' + state.maxSkipsAllowed
+                        : '');
+            }
+            if (hallDock) {
+                var hsb = state.hallScoreboard;
+                if (hsb && hsb.rows && hsb.rows.length) {
+                    hallDock.classList.remove('hidden');
+                    hallDock.textContent = '';
+                    hsb.rows.forEach(function (row, idx) {
+                        var pill = document.createElement('span');
+                        pill.className = 'display-hall-pill';
+                        var nm = document.createElement('span');
+                        nm.className = 'display-hall-pill-name';
+                        nm.textContent = row.name || '';
+                        var sc = document.createElement('strong');
+                        sc.className = 'display-hall-pill-score';
+                        sc.textContent = row.score != null ? String(row.score) : '0';
+                        pill.appendChild(nm);
+                        pill.appendChild(document.createTextNode(' '));
+                        pill.appendChild(sc);
+                        hallDock.appendChild(pill);
+                        if (hsb.mode === 'tournament' && idx === 0 && hsb.rows.length > 1) {
+                            var vs = document.createElement('span');
+                            vs.className = 'display-hall-vs';
+                            vs.textContent = '—';
+                            hallDock.appendChild(vs);
+                        }
+                    });
+                } else {
+                    hallDock.classList.add('hidden');
+                    hallDock.textContent = '';
+                }
             }
             return;
         }
 
         if (phase === 'results' && state.results && resultsEl) {
+            if (hallDock) {
+                hallDock.classList.add('hidden');
+                hallDock.textContent = '';
+            }
             resultsEl.classList.remove('hidden');
             var r = state.results;
             resultsTitle.textContent = r.title || 'Результаты';
@@ -449,6 +503,11 @@
                 resultsBody.textContent = r.body || '';
             }
             return;
+        }
+
+        if (hallDock) {
+            hallDock.classList.add('hidden');
+            hallDock.textContent = '';
         }
 
         idleEl.classList.remove('hidden');

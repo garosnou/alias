@@ -290,10 +290,9 @@
             var ftTurnBoard = typeof getFlexibleCurrentTurn === 'function' ? getFlexibleCurrentTurn() : null;
             var ftsBoard = typeof flexibleTournamentState !== 'undefined' ? flexibleTournamentState : null;
             var ftRoundDone = false;
-            if (ftsBoard && ftsBoard.roundTeamIndices && ftsBoard.roundTeamIndices.length && typeof getFlexibleRoundMaxPlayers === 'function') {
-                var maxPB = getFlexibleRoundMaxPlayers();
-                var kb = ftsBoard.roundTeamIndices.length;
-                if (maxPB > 0 && kb > 0 && (ftsBoard.flexibleTurnIndex || 0) >= maxPB * kb) {
+            if (ftsBoard && ftsBoard.roundTeamIndices && ftsBoard.roundTeamIndices.length && typeof getFlexibleRoundTotalTurns === 'function') {
+                var totTurns = getFlexibleRoundTotalTurns();
+                if (totTurns > 0 && (ftsBoard.flexibleTurnIndex || 0) >= totTurns) {
                     ftRoundDone = true;
                 }
             }
@@ -348,6 +347,11 @@
             wordNumForHall = 0;
         }
 
+        var hallScoreboard = null;
+        if (screenId === 'game-screen' && typeof buildHallScoreboardForSync === 'function') {
+            hallScoreboard = buildHallScoreboardForSync();
+        }
+
         return {
             flash: flash || null,
             state: {
@@ -364,7 +368,10 @@
                 results: results,
                 tournamentBoard: tournamentBoard,
                 competitiveHall: competitiveHall,
-                flexibleExplainer: flexibleExplainer
+                flexibleExplainer: flexibleExplainer,
+                hallScoreboard: hallScoreboard,
+                skipsRemaining: gs && gs.maxSkipsAllowed > 0 ? gs.skipsRemaining : null,
+                maxSkipsAllowed: gs && gs.maxSkipsAllowed > 0 ? gs.maxSkipsAllowed : null
             }
         };
     }
@@ -500,6 +507,8 @@
         'endFlexibleRound',
         'cancelFlexibleRound',
         'flexibleAfterRoundToSetup',
+        'resetFlexibleTournamentPersisted',
+        'addFlexibleTeamQuick',
         'addFlexibleTeamFromForm',
         'removeFlexibleTeam'
     ].forEach(wrapPost);

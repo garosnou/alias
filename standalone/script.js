@@ -16,7 +16,9 @@ let gameState = {
     timerInterval: null,
     score: 0,
     correctWords: [], // Список отгаданных слов
-    skippedWordsList: [] // Список пропущенных слов
+    skippedWordsList: [], // Список пропущенных слов
+    maxSkipsAllowed: 0,
+    skipsRemaining: 0
 };
 
 // Настройки по умолчанию
@@ -71,8 +73,152 @@ let flexibleTournamentState = {
     roundScores: [],
     roundPlayerResults: [],
     gameTime: 60,
-    totalScoresByTeam: {}
+    totalScoresByTeam: {},
+    /** 0 = без лимита; иначе макс. пропусков за один ход объясняющего */
+    maxSkipsPerTurn: 0,
+    /** null / пусто = число кругов по самой большой команде; иначе явное число кругов (1…50) */
+    roundCirclesOverride: null,
+    /** Сколько игроков «Игрок 1…» при быстром добавлении команды */
+    defaultPlayersForQuickAdd: 3
 };
+
+const FLEXIBLE_STORAGE_KEY = 'alias-standalone-flexible-v1';
+
+function readFlexibleStorageSnapshot() {
+    try {
+        const raw = localStorage.getItem(FLEXIBLE_STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (_) {
+        return null;
+    }
+}
+
+function writeFlexibleTournamentToStorage() {
+    try {
+        const payload = {
+            teams: flexibleTournamentState.teams,
+            totalScoresByTeam: flexibleTournamentState.totalScoresByTeam,
+            gameTime: flexibleTournamentState.gameTime,
+            maxSkipsPerTurn: flexibleTournamentState.maxSkipsPerTurn,
+            roundCirclesOverride: flexibleTournamentState.roundCirclesOverride,
+            defaultPlayersForQuickAdd: flexibleTournamentState.defaultPlayersForQuickAdd
+        };
+        localStorage.setItem(FLEXIBLE_STORAGE_KEY, JSON.stringify(payload));
+    } catch (_) {}
+}
+
+function flexPersistedSnapshotHasData(snap) {
+    if (!snap || typeof snap !== 'object') return false;
+    if (Array.isArray(snap.teams) && snap.teams.length > 0) return true;
+    if (snap.totalScoresByTeam && typeof snap.totalScoresByTeam === 'object' && Object.keys(snap.totalScoresByTeam).length > 0) return true;
+    return false;
+}
+
+function applyFlexibleSnapshotToState(snap) {
+    if (!snap || typeof snap !== 'object') return;
+    if (Array.isArray(snap.teams)) flexibleTournamentState.teams = snap.teams;
+    if (snap.totalScoresByTeam && typeof snap.totalScoresByTeam === 'object') {
+        flexibleTournamentState.totalScoresByTeam = { ...snap.totalScoresByTeam };
+    } else {
+        flexibleTournamentState.totalScoresByTeam = {};
+    }
+    if (typeof snap.gameTime === 'number' && snap.gameTime > 0) {
+        flexibleTournamentState.gameTime = snap.gameTime;
+    } else {
+        const g = parseInt(snap.gameTime, 10);
+        if (!Number.isNaN(g) && g > 0) flexibleTournamentState.gameTime = g;
+    }
+    const ms = parseInt(snap.maxSkipsPerTurn, 10);
+    flexibleTournamentState.maxSkipsPerTurn = !Number.isNaN(ms) && ms > 0 ? ms : 0;
+    const ro = snap.roundCirclesOverride;
+    if (ro == null || ro === '') flexibleTournamentState.roundCirclesOverride = null;
+    else {
+        const c = parseInt(ro, 10);
+        flexibleTournamentState.roundCirclesOverride = !Number.isNaN(c) && c > 0 ? c : null;
+    }
+    const dq = parseInt(snap.defaultPlayersForQuickAdd, 10);
+    flexibleTournamentState.defaultPlayersForQuickAdd = !Number.isNaN(dq) && dq >= 1 ? Math.min(dq, 20) : 3;
+}
+
+function clearFlexibleRoundProgressOnly() {
+    flexibleTournamentState.roundTeamIndices = [];
+    flexibleTournamentState.flexibleTurnIndex = 0;
+    flexibleTournamentState.roundScores = [];
+    flexibleTournamentState.roundPlayerResults = [];
+    flexibleTournamentState.pendingRoundTeamIndices = null;
+}
+
+function resetFlexibleTournamentPersisted() {
+    if (!confirm('Сбросить гибкий турнир? Удалятся все команды, сохранённые очки и настройки раунда в этом режиме.')) return;
+    flexibleTournamentState.teams = [];
+    flexibleTournamentState.totalScoresByTeam = {};
+    flexibleTournamentState.gameTime = 60;
+    flexibleTournamentState.maxSkipsPerTurn = 0;
+    flexibleTournamentState.roundCirclesOverride = null;
+    flexibleTournamentState.defaultPlayersForQuickAdd = 3;
+    clearFlexibleRoundProgressOnly();
+    try {
+        localStorage.removeItem(FLEXIBLE_STORAGE_KEY);
+    } catch (_) {}
+    syncFlexibleTournamentFormFields();
+    renderFlexibleTeamsList();
+    renderFlexibleRoundTeamCheckboxes();
+    showNotification('Гибкий турнир сброшен');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function syncFlexibleTournamentFormFields() {
+    const tSel = document.getElementById('flexible-tournament-time');
+    if (tSel) tSel.value = String(flexibleTournamentState.gameTime || 60);
+    const ms = document.getElementById('flexible-max-skips');
+    if (ms) ms.value = flexibleTournamentState.maxSkipsPerTurn > 0 ? String(flexibleTournamentState.maxSkipsPerTurn) : '';
+    const rc = document.getElementById('flexible-round-circles');
+    if (rc) rc.value = flexibleTournamentState.roundCirclesOverride != null ? String(flexibleTournamentState.roundCirclesOverride) : '';
+    const dq = document.getElementById('flexible-quick-default-players');
+    if (dq) dq.value = String(flexibleTournamentState.defaultPlayersForQuickAdd || 3);
+}
+
+function readFlexibleSettingsFromForm() {
+    const tSel = document.getElementById('flexible-tournament-time');
+    if (tSel) {
+        let gt = parseInt(tSel.value, 10);
+        if (Number.isNaN(gt) || gt <= 0) gt = 60;
+        flexibleTournamentState.gameTime = gt;
+    }
+    const msEl = document.getElementById('flexible-max-skips');
+    if (msEl) {
+        const v = parseInt(msEl.value, 10);
+        flexibleTournamentState.maxSkipsPerTurn = !Number.isNaN(v) && v > 0 ? Math.min(v, 999) : 0;
+    }
+    const rcEl = document.getElementById('flexible-round-circles');
+    if (rcEl) {
+        const raw = (rcEl.value || '').trim();
+        if (!raw) flexibleTournamentState.roundCirclesOverride = null;
+        else {
+            const c = parseInt(raw, 10);
+            flexibleTournamentState.roundCirclesOverride = !Number.isNaN(c) && c >= 1 ? Math.min(c, 50) : null;
+        }
+    }
+    const dqEl = document.getElementById('flexible-quick-default-players');
+    if (dqEl) {
+        const d = parseInt(dqEl.value, 10);
+        flexibleTournamentState.defaultPlayersForQuickAdd = !Number.isNaN(d) && d >= 1 ? Math.min(d, 20) : 3;
+    }
+}
+
+function setupFlexibleTournamentFormListeners() {
+    ['flexible-tournament-time', 'flexible-max-skips', 'flexible-round-circles', 'flexible-quick-default-players'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+            if (!flexibleTournamentState.isFlexibleMode) return;
+            readFlexibleSettingsFromForm();
+            writeFlexibleTournamentToStorage();
+            if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+        });
+    });
+}
 
 // Инициализация игры
 document.addEventListener('DOMContentLoaded', function() {
@@ -82,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateWordSourceUI();
     setupKeyboardControls();
     setupCustomPackControls();
+    setupFlexibleTournamentFormListeners();
     updateMainInfoBanner();
 });
 
@@ -287,6 +434,8 @@ function resetGameUI() {
     gameState.skippedWordsList = [];
     gameState.timeLimit = settings.gameTime;
     gameState.timeRemaining = settings.gameTime;
+    gameState.maxSkipsAllowed = 0;
+    gameState.skipsRemaining = 0;
 
     // Сбрасываем визуальные элементы игрового экрана
     const timerElement = document.getElementById('timer');
@@ -362,10 +511,12 @@ function startGame() {
         category = settings.wordSource === 'builtin' ? settings.category : 'custom';
         // режим игры фиксируется при старте турнира
     } else if (flexibleTournamentState.isFlexibleMode) {
+        readFlexibleSettingsFromForm();
         const ftSel = document.getElementById('flexible-tournament-time');
-        gameTime = ftSel ? parseInt(ftSel.value, 10) : 60;
+        gameTime = ftSel ? parseInt(ftSel.value, 10) : flexibleTournamentState.gameTime || 60;
         if (Number.isNaN(gameTime) || gameTime <= 0) gameTime = 60;
         flexibleTournamentState.gameTime = gameTime;
+        writeFlexibleTournamentToStorage();
         category = settings.wordSource === 'builtin' ? settings.category : 'custom';
     } else if (competitiveState.isCompetitiveMode) {
         gameTime = settings.gameTime;
@@ -378,6 +529,16 @@ function startGame() {
 
     const WORDS_BATCH_SIZE = 50;
     const words = getWordsForCurrentSource(category, WORDS_BATCH_SIZE);
+
+    let maxSkipsAllowed = 0;
+    let skipsRemaining = 0;
+    if (flexibleTournamentState.isFlexibleMode) {
+        const lim = parseInt(flexibleTournamentState.maxSkipsPerTurn, 10) || 0;
+        if (lim > 0) {
+            maxSkipsAllowed = lim;
+            skipsRemaining = lim;
+        }
+    }
 
     gameState = {
         isPlaying: true,
@@ -394,7 +555,9 @@ function startGame() {
         timerInterval: null,
         score: 0,
         correctWords: [],
-        skippedWordsList: []
+        skippedWordsList: [],
+        maxSkipsAllowed,
+        skipsRemaining
     };
     
     updateGameUI();
@@ -524,7 +687,14 @@ function correctAnswer() {
 // Пропуск слова
 function skipWord() {
     if (!gameState.isPlaying || gameState.isPaused) return;
+    if (gameState.maxSkipsAllowed > 0 && (gameState.skipsRemaining == null || gameState.skipsRemaining <= 0)) {
+        showNotification('Лимит пропусков исчерпан');
+        return;
+    }
     gameState.skippedWords++;
+    if (gameState.maxSkipsAllowed > 0 && gameState.skipsRemaining > 0) {
+        gameState.skipsRemaining--;
+    }
     // Добавляем текущее слово в список пропущенных
     if (gameState.currentWordIndex < gameState.words.length) {
         gameState.skippedWordsList.push(gameState.words[gameState.currentWordIndex]);
@@ -560,7 +730,12 @@ function pauseGame() {
     showScreen('pause-screen');
 }
 
-function resumeGame() { gameState.isPaused = false; showScreen('game-screen'); }
+function resumeGame() {
+    gameState.isPaused = false;
+    showScreen('game-screen');
+    updateHostPlayingScoreboard();
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
 
 function endGame() {
     // Сбрасываем состояние игры независимо от текущего состояния
@@ -875,6 +1050,7 @@ function updateCurrentPlayerInfo() {
     
     // Обновляем счет команд
     updateMatchScore();
+    updateHostPlayingScoreboard();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
@@ -887,6 +1063,7 @@ function updateMatchScore() {
         team1ScoreElement.textContent = tournamentState.matchScores[0];
         team2ScoreElement.textContent = tournamentState.matchScores[1];
     }
+    updateHostPlayingScoreboard();
 }
 
 // Начало дополнительного раунда при ничьей
@@ -1367,7 +1544,149 @@ function updateMainInfoBanner() {
 function newGame() { startGame(); }
 
 // Обновление игрового UI
-function updateGameUI() { document.getElementById('current-score').textContent = Math.round(gameState.score); }
+function updateGameUI() {
+    const scoreEl = document.getElementById('current-score');
+    if (scoreEl) scoreEl.textContent = Math.round(gameState.score);
+    const skipBtn = document.getElementById('skip-btn');
+    const skipLimWrap = document.getElementById('host-skip-limit-wrap');
+    const skipLimVal = document.getElementById('host-skip-limit-val');
+    const lim = gameState.maxSkipsAllowed > 0 ? gameState.maxSkipsAllowed : 0;
+    const rem = gameState.skipsRemaining != null ? gameState.skipsRemaining : 0;
+    if (skipLimWrap && skipLimVal) {
+        if (lim > 0) {
+            skipLimWrap.style.display = '';
+            skipLimVal.textContent = String(rem);
+        } else {
+            skipLimWrap.style.display = 'none';
+        }
+    }
+    if (skipBtn) {
+        if (lim > 0 && rem <= 0 && gameState.isPlaying && !gameState.isPaused) {
+            skipBtn.disabled = true;
+        } else {
+            skipBtn.disabled = false;
+        }
+    }
+    updateHostPlayingScoreboard();
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function getTournamentScorebarPlayingSlot() {
+    if (!tournamentState.isTournamentMode) return null;
+    if (tournamentState.isOvertime) {
+        const op = tournamentState.overtimePlayers[tournamentState.currentPlayerIndex];
+        return op ? op.teamIndex : 0;
+    }
+    if (tournamentState.gameMode === 'sequential') return tournamentState.currentTeamIndex;
+    return tournamentState.currentPlayerIndex % 2;
+}
+
+function updateHostPlayingScoreboard() {
+    const bar = document.getElementById('host-playing-scoreboard');
+    const inner = document.getElementById('host-playing-scoreboard-inner');
+    if (!bar || !inner) return;
+    const active = document.querySelector('.screen.active');
+    const sid = active ? active.id : '';
+    if (sid !== 'game-screen') {
+        bar.classList.add('hidden');
+        return;
+    }
+    const live = gameState.isPlaying && !gameState.isPaused;
+    const prep = document.getElementById('competitive-prep');
+    const prepOn = !!(prep && prep.style.display !== 'none');
+
+    if (flexibleTournamentState.isFlexibleMode && flexibleTournamentState.roundTeamIndices && flexibleTournamentState.roundTeamIndices.length) {
+        bar.classList.remove('hidden');
+        const turn = typeof getFlexibleCurrentTurn === 'function' ? getFlexibleCurrentTurn() : null;
+        const idxs = flexibleTournamentState.roundTeamIndices;
+        const scores = flexibleTournamentState.roundScores || [];
+        const parts = idxs.map((ti, i) => {
+            const t = flexibleTournamentState.teams[ti];
+            let sc = scores[i] != null ? scores[i] : 0;
+            if (live && turn && turn.slot === i) sc += Math.round(gameState.score);
+            const nm = t ? t.name : '—';
+            return `<span class="host-sb-pill"><span class="host-sb-name">${escapeHtmlFlexible(nm)}</span> <strong class="host-sb-num">${Math.round(sc)}</strong></span>`;
+        });
+        inner.innerHTML = parts.join('');
+        return;
+    }
+
+    if (tournamentState.isTournamentMode) {
+        const currentMatch = tournamentState.matches[tournamentState.currentMatch];
+        if (!currentMatch) {
+            bar.classList.add('hidden');
+            return;
+        }
+        const { team1Id, team2Id } = getResolvedTeamIds(currentMatch);
+        const t1 = team1Id != null ? tournamentState.teams[team1Id] : null;
+        const t2 = team2Id != null ? tournamentState.teams[team2Id] : null;
+        const ms = tournamentState.matchScores || [0, 0];
+        let s0 = ms[0] != null ? ms[0] : 0;
+        let s1 = ms[1] != null ? ms[1] : 0;
+        const slot = getTournamentScorebarPlayingSlot();
+        if (live && !prepOn && (slot === 0 || slot === 1)) {
+            if (slot === 0) s0 += Math.round(gameState.score);
+            else s1 += Math.round(gameState.score);
+        }
+        const n1 = t1 ? t1.name : 'Команда 1';
+        const n2 = t2 ? t2.name : 'Команда 2';
+        bar.classList.remove('hidden');
+        inner.innerHTML =
+            `<span class="host-sb-pill"><span class="host-sb-name">${escapeHtmlFlexible(n1)}</span> <strong class="host-sb-num">${Math.round(s0)}</strong></span>` +
+            `<span class="host-sb-vs">—</span>` +
+            `<span class="host-sb-pill"><span class="host-sb-name">${escapeHtmlFlexible(n2)}</span> <strong class="host-sb-num">${Math.round(s1)}</strong></span>`;
+        return;
+    }
+
+    bar.classList.add('hidden');
+    inner.innerHTML = '';
+}
+
+/** Для синхронизации зала: счёт матча/раунда во время игры на экране ведущего */
+function buildHallScoreboardForSync() {
+    const gs = typeof gameState !== 'undefined' ? gameState : null;
+    const flex = typeof flexibleTournamentState !== 'undefined' ? flexibleTournamentState : null;
+    const tour = typeof tournamentState !== 'undefined' ? tournamentState : null;
+    const live = gs && gs.isPlaying && !gs.isPaused;
+    const prep = document.getElementById('competitive-prep');
+    const prepOn = !!(prep && prep.style.display !== 'none');
+
+    if (flex && flex.isFlexibleMode && flex.roundTeamIndices && flex.roundTeamIndices.length) {
+        const turn = typeof getFlexibleCurrentTurn === 'function' ? getFlexibleCurrentTurn() : null;
+        const idxs = flex.roundTeamIndices;
+        const scores = flex.roundScores || [];
+        const rows = idxs.map((ti, i) => {
+            const t = flex.teams[ti];
+            let sc = scores[i] != null ? scores[i] : 0;
+            if (live && !prepOn && turn && turn.slot === i) sc += Math.round(gs.score);
+            return { name: t ? t.name : '—', score: Math.round(sc) };
+        });
+        return { mode: 'flexible', rows: rows };
+    }
+    if (tour && tour.isTournamentMode) {
+        const currentMatch = tour.matches[tour.currentMatch];
+        if (!currentMatch) return null;
+        const { team1Id, team2Id } = getResolvedTeamIds(currentMatch);
+        const t1 = team1Id != null ? tour.teams[team1Id] : null;
+        const t2 = team2Id != null ? tour.teams[team2Id] : null;
+        const ms = tour.matchScores || [0, 0];
+        let s0 = ms[0] != null ? ms[0] : 0;
+        let s1 = ms[1] != null ? ms[1] : 0;
+        const slot = getTournamentScorebarPlayingSlot();
+        if (live && !prepOn && (slot === 0 || slot === 1)) {
+            if (slot === 0) s0 += Math.round(gs.score);
+            else s1 += Math.round(gs.score);
+        }
+        return {
+            mode: 'tournament',
+            rows: [
+                { name: t1 ? t1.name : 'Команда 1', score: Math.round(s0) },
+                { name: t2 ? t2.name : 'Команда 2', score: Math.round(s1) }
+            ]
+        };
+    }
+    return null;
+}
 
 // Управление с клавиатуры
 function setupKeyboardControls() {
@@ -1532,6 +1851,9 @@ window.startNextFlexiblePlayer = startNextFlexiblePlayer;
 window.endFlexibleRound = endFlexibleRound;
 window.cancelFlexibleRound = cancelFlexibleRound;
 window.flexibleAfterRoundToSetup = flexibleAfterRoundToSetup;
+window.resetFlexibleTournamentPersisted = resetFlexibleTournamentPersisted;
+window.addFlexibleTeamQuick = addFlexibleTeamQuick;
+window.buildHallScoreboardForSync = buildHallScoreboardForSync;
 
 // -------------------------
 // Гибкий турнир (реализация)
@@ -1549,18 +1871,32 @@ function showFlexibleTournamentFromMenu() {
     tournamentState.isTournamentMode = false;
     competitiveState.isCompetitiveMode = false;
     flexibleTournamentState.isFlexibleMode = true;
-    flexibleTournamentState.teams = [];
-    flexibleTournamentState.roundTeamIndices = [];
-    flexibleTournamentState.flexibleTurnIndex = 0;
-    flexibleTournamentState.roundScores = [];
-    flexibleTournamentState.roundPlayerResults = [];
-    flexibleTournamentState.totalScoresByTeam = {};
-    flexibleTournamentState.pendingRoundTeamIndices = null;
+
+    const snap = readFlexibleStorageSnapshot();
+    const memoryEmpty = !flexibleTournamentState.teams || flexibleTournamentState.teams.length === 0;
+
+    if (memoryEmpty && flexPersistedSnapshotHasData(snap)) {
+        if (confirm('Продолжить сохранённый гибкий турнир? Отмена — удалить сохранение и начать с пустого списка команд.')) {
+            applyFlexibleSnapshotToState(snap);
+        } else {
+            try {
+                localStorage.removeItem(FLEXIBLE_STORAGE_KEY);
+            } catch (_) {}
+            flexibleTournamentState.teams = [];
+            flexibleTournamentState.totalScoresByTeam = {};
+            flexibleTournamentState.gameTime = 60;
+            flexibleTournamentState.maxSkipsPerTurn = 0;
+            flexibleTournamentState.roundCirclesOverride = null;
+            flexibleTournamentState.defaultPlayersForQuickAdd = 3;
+        }
+    }
+
     const sb = document.getElementById('competitive-scoreboard');
     if (sb) sb.style.display = 'none';
     const prep = document.getElementById('competitive-prep');
     if (prep) prep.style.display = 'none';
     resetGameUI();
+    syncFlexibleTournamentFormFields();
     renderFlexibleTeamsList();
     renderFlexibleRoundTeamCheckboxes();
     showScreen('flexible-tournament-setup');
@@ -1575,6 +1911,7 @@ function flexibleAfterRoundToSetup() {
     flexibleTournamentState.pendingRoundTeamIndices = null;
     renderFlexibleRoundTeamCheckboxes();
     showScreen('flexible-tournament-setup');
+    writeFlexibleTournamentToStorage();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
@@ -1597,12 +1934,15 @@ function addFlexibleTeam(name, players) {
     });
     renderFlexibleTeamsList();
     renderFlexibleRoundTeamCheckboxes();
+    writeFlexibleTournamentToStorage();
     return true;
 }
 
 function addFlexibleTeamFromForm() {
-    const nameEl = document.getElementById('flexible-team-name');
-    const plEl = document.getElementById('flexible-team-players');
+    const root = document.getElementById('flexible-tournament-setup');
+    const nameEl = root ? root.querySelector('#flexible-team-name') : document.getElementById('flexible-team-name');
+    const plEl = root ? root.querySelector('#flexible-team-players') : document.getElementById('flexible-team-players');
+    readFlexibleSettingsFromForm();
     const name = nameEl ? nameEl.value : '';
     const playersText = plEl ? plEl.value : '';
     const players = playersText.split(',').map(p => p.trim()).filter(p => p.length > 0);
@@ -1612,10 +1952,22 @@ function addFlexibleTeamFromForm() {
     }
 }
 
+function addFlexibleTeamQuick() {
+    readFlexibleSettingsFromForm();
+    let n = parseInt(flexibleTournamentState.defaultPlayersForQuickAdd, 10);
+    if (Number.isNaN(n) || n < 1) n = 3;
+    n = Math.min(n, 20);
+    const idx = flexibleTournamentState.teams.length + 1;
+    const players = [];
+    for (let i = 1; i <= n; i++) players.push(`Игрок ${i}`);
+    addFlexibleTeam(`Команда ${idx}`, players);
+}
+
 function removeFlexibleTeam(index) {
     flexibleTournamentState.teams.splice(index, 1);
     renderFlexibleTeamsList();
     renderFlexibleRoundTeamCheckboxes();
+    writeFlexibleTournamentToStorage();
 }
 
 function renderFlexibleTeamsList() {
@@ -1677,6 +2029,8 @@ function getSelectedFlexibleRoundTeamIndices() {
 }
 
 function callFlexibleTeams() {
+    readFlexibleSettingsFromForm();
+    writeFlexibleTournamentToStorage();
     const picks = getSelectedFlexibleRoundTeamIndices();
     if (picks.length < 1) {
         showNotification('Выберите от одной до трёх команд');
@@ -1745,10 +2099,21 @@ function getFlexibleRoundMaxPlayers() {
     return m;
 }
 
+/** Число кругов в раунде: явное из настроек или по самой большой команде */
+function getFlexibleRoundCircleCount() {
+    const natural = getFlexibleRoundMaxPlayers();
+    if (natural < 1) return 0;
+    const raw = flexibleTournamentState.roundCirclesOverride;
+    if (raw == null || raw === '') return natural;
+    const c = typeof raw === 'number' ? raw : parseInt(String(raw).trim(), 10);
+    if (Number.isNaN(c) || c < 1) return natural;
+    return Math.min(Math.max(c, 1), 50);
+}
+
 function getFlexibleRoundTotalTurns() {
     const k = flexibleTournamentState.roundTeamIndices.length;
-    const maxP = getFlexibleRoundMaxPlayers();
-    return maxP * k;
+    const circles = getFlexibleRoundCircleCount();
+    return circles * k;
 }
 
 function getFlexibleCurrentTurn() {
@@ -1756,9 +2121,9 @@ function getFlexibleCurrentTurn() {
     const idxs = fts.roundTeamIndices;
     if (!fts.isFlexibleMode || !idxs || !idxs.length) return null;
     const k = idxs.length;
-    const maxP = getFlexibleRoundMaxPlayers();
-    if (maxP < 1 || k < 1) return null;
-    const total = maxP * k;
+    const circleCount = getFlexibleRoundCircleCount();
+    if (circleCount < 1 || k < 1) return null;
+    const total = circleCount * k;
     const tix = fts.flexibleTurnIndex || 0;
     if (tix >= total) return null;
 
@@ -1776,7 +2141,7 @@ function getFlexibleCurrentTurn() {
         playerName,
         playerIndex,
         circle: circle + 1,
-        circleMax: maxP,
+        circleMax: circleCount,
         turnInRound: tix + 1,
         turnMax: total
     };
@@ -1801,11 +2166,21 @@ function updateFlexibleMatchScreen() {
             </div>
         `;
     }).join('');
-    const maxP = getFlexibleRoundMaxPlayers();
+    const circleCount = getFlexibleRoundCircleCount();
     const totalTurns = getFlexibleRoundTotalTurns();
+    const natural = getFlexibleRoundMaxPlayers();
+    const rawOverride = flexibleTournamentState.roundCirclesOverride;
+    const hasOverride =
+        rawOverride != null &&
+        String(rawOverride).trim() !== '' &&
+        !Number.isNaN(parseInt(String(rawOverride), 10)) &&
+        parseInt(String(rawOverride), 10) >= 1;
+    const circlesHint = hasOverride
+        ? `задано вручную: <strong>${circleCount}</strong> (без учёта «${natural}» по составу; в маленьких командах игроки повторяются по кругу)`
+        : `по числу игроков в самой большой команде (<strong>${natural}</strong>); в маленьких командах игроки повторяются по кругу`;
     info.innerHTML = `
         <h3>Раунд гибкого турнира</h3>
-        <p><strong>Кругов в раунде:</strong> ${maxP} (по числу игроков в самой большой команде; в маленьких командах игроки повторяются по кругу)</p>
+        <p><strong>Кругов в раунде:</strong> ${circlesHint}</p>
         <p><strong>Команд в раунде:</strong> ${idxs.length} · <strong>Всего ходов:</strong> ${totalTurns}</p>
         <div class="ft-score-strip">${pills}</div>
     `;
@@ -1818,12 +2193,12 @@ function updateFlexiblePlayerInfo() {
     if (!turn) {
         const idxs = flexibleTournamentState.roundTeamIndices;
         const k = idxs && idxs.length ? idxs.length : 0;
-        const maxP = getFlexibleRoundMaxPlayers();
-        const total = maxP * k;
+        const circleCount = getFlexibleRoundCircleCount();
+        const total = circleCount * k;
         const done =
             flexibleTournamentState.isFlexibleMode &&
             k > 0 &&
-            maxP > 0 &&
+            circleCount > 0 &&
             (flexibleTournamentState.flexibleTurnIndex || 0) >= total;
         el.innerHTML = done
             ? '<h3>Раунд сыгран</h3><p>Все ходы этого раунда завершены. Нажмите «Завершить раунд».</p>'
@@ -1933,6 +2308,7 @@ function endFlexibleRound() {
         `;
     }
     showScreen('flexible-round-results');
+    writeFlexibleTournamentToStorage();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
@@ -1945,6 +2321,7 @@ function cancelFlexibleRound() {
     flexibleTournamentState.pendingRoundTeamIndices = null;
     renderFlexibleRoundTeamCheckboxes();
     showScreen('flexible-tournament-setup');
+    writeFlexibleTournamentToStorage();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
