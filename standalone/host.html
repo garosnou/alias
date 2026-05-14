@@ -143,8 +143,8 @@
                     </div>
                 </div>
                 
-                <div class="game-stats">
-                    <div class="stat">
+                <div class="game-stats" id="host-game-stats">
+                    <div class="stat" id="host-word-stat-wrap">
                         <span class="stat-label">Слово:</span>
                         <span class="stat-value" id="current-word-number">0</span>
                     </div>
@@ -181,6 +181,21 @@
 
             <div id="host-playing-scoreboard" class="host-playing-scoreboard hidden" aria-live="polite">
                 <div id="host-playing-scoreboard-inner" class="host-playing-scoreboard-inner"></div>
+            </div>
+
+            <div id="custom-pack-depleted-overlay" class="custom-pack-depleted-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="custom-pack-depleted-title">
+                <div class="custom-pack-depleted-dialog">
+                    <h3 id="custom-pack-depleted-title">Слова закончились</h3>
+                    <p class="custom-pack-depleted-lead">Игра на паузе. Выберите новый файл <strong>.txt</strong> (по одному слову в строке) и нажмите «Загрузить и продолжить» — раунд продолжится с новым пакетом.</p>
+                    <div class="custom-pack-depleted-row">
+                        <input type="file" id="custom-pack-depleted-input" accept=".txt" class="custom-pack-depleted-file">
+                        <button type="button" class="btn btn-primary" id="custom-pack-depleted-import">Загрузить и продолжить</button>
+                    </div>
+                    <p class="hint">Новый файл заменит пакет в памяти и сбросит отметки «уже сыграно» для этих слов.</p>
+                    <div class="custom-pack-depleted-actions">
+                        <button type="button" class="btn btn-secondary" id="custom-pack-depleted-endgame">Завершить игру</button>
+                    </div>
+                </div>
             </div>
 
             <div id="competitive-scoreboard" class="competitive-scoreboard" style="display:none;">
@@ -266,7 +281,7 @@
     <div id="flexible-tournament-setup" class="screen">
         <div class="container">
             <h2>Гибкий турнир</h2>
-            <p class="hint">Создайте команды заранее или добавляйте по ходу. Состав и очки сохраняются в браузере до сброса. В каждом раунде выберите до <strong>трёх</strong> команд и нажмите «Вызвать команды» — зал увидит состав. Число <strong>кругов</strong> по умолчанию равно числу игроков у самой большой из выбранных команд (можно задать вручную ниже). У команды меньше игроков — те же игроки снова по кругу.</p>
+            <p class="hint">Создайте команды заранее или добавляйте по ходу. Состав и очки сохраняются в браузере до сброса. В каждом раунде выберите до <strong>16</strong> команд и нажмите «Вызвать команды» — зал увидит состав. Число <strong>кругов</strong> по умолчанию равно числу игроков у самой большой из выбранных команд (можно задать вручную ниже). У команды меньше игроков — те же игроки снова по кругу.</p>
 
             <div class="tournament-settings">
                 <div class="settings-group">
@@ -291,11 +306,17 @@
                     <input type="number" id="flexible-quick-default-players" min="1" max="20" value="3" class="flexible-num-input">
                     <p class="hint">Только для кнопки «Быстро добавить» — не связано с числом кругов.</p>
                 </div>
+                <div class="settings-group">
+                    <label>Порядок ходов в раунде</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="flexible-turn-order" id="flexible-turn-order-interleaved" value="interleaved" checked> По кругу команд (по одному игроку с каждой)</label>
+                        <label><input type="radio" name="flexible-turn-order" id="flexible-turn-order-by-team" value="byTeam"> Подряд по командам (сначала все ходы первой команды, затем второй и т.д.)</label>
+                    </div>
+                </div>
             </div>
 
             <div class="teams-section">
                 <h3>Команды</h3>
-                <div id="flexible-teams-list"></div>
                 <div class="add-team-form">
                     <h4>Добавить команду</h4>
                     <div class="form-group">
@@ -309,10 +330,11 @@
                     <button type="button" class="btn btn-primary" onclick="addFlexibleTeamFromForm()">Добавить команду</button>
                     <button type="button" class="btn btn-secondary" onclick="addFlexibleTeamQuick()">Быстро добавить</button>
                 </div>
+                <div id="flexible-teams-list" class="flexible-teams-list-below"></div>
             </div>
 
             <div class="settings-group">
-                <h3>Кто играет в следующем раунде (1–3 команды)</h3>
+                <h3>Кто играет в следующем раунде (1–16 команд)</h3>
                 <div id="flexible-round-picks" class="flexible-round-picks"></div>
             </div>
 
@@ -342,7 +364,7 @@
             <div id="ft-current-player-info"></div>
             <div class="match-controls">
                 <button type="button" class="btn btn-primary" onclick="startNextFlexiblePlayer()">Начать игру игрока</button>
-                <button type="button" class="btn btn-secondary" onclick="endFlexibleRound()">Завершить раунд</button>
+                <button type="button" class="btn btn-secondary" onclick="endFlexibleRoundWithConfirm()">Завершить раунд</button>
                 <button type="button" class="btn btn-secondary" onclick="cancelFlexibleRound()">Отменить раунд</button>
                 <button type="button" class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
             </div>

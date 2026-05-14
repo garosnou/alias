@@ -71,21 +71,53 @@
 
     function scrapeFlexibleRoundSummary() {
         var root = document.getElementById('flexible-round-summary');
-        if (!root) return { rows: [], footnote: '' };
-        var rows = [];
+        if (!root) return { columnHeaders: [], rows: [], footnote: '' };
+        var grid = root.querySelector('.ft-summary-grid--by-players');
+        if (grid) {
+            var columnHeaders = [];
+            var head = grid.querySelector('.ft-summary-head');
+            if (head) {
+                head.querySelectorAll('.ft-summary-h-player').forEach(function (h) {
+                    columnHeaders.push(safeText(h));
+                });
+            }
+            var rows = [];
+            grid.querySelectorAll('.ft-summary-body .ft-summary-row').forEach(function (row) {
+                var teamEl = row.querySelector('.ft-summary-team');
+                var pcells = row.querySelectorAll('.ft-summary-pcell');
+                var rt = row.querySelector('.ft-summary-round-total');
+                var tt = row.querySelector('.ft-summary-tourney-total');
+                rows.push({
+                    team: teamEl ? safeText(teamEl) : '',
+                    cells: Array.from(pcells).map(function (c) {
+                        return safeText(c);
+                    }),
+                    roundTotal: rt ? safeText(rt) : '',
+                    tournamentTotal: tt ? safeText(tt) : ''
+                });
+            });
+            var foot = root.querySelector('.ft-summary-footnote');
+            return {
+                columnHeaders: columnHeaders,
+                rows: rows,
+                footnote: foot ? safeText(foot) : ''
+            };
+        }
+        var rowsLegacy = [];
         root.querySelectorAll('.ft-summary-body .ft-summary-row').forEach(function (row) {
             var teamEl = row.querySelector('.ft-summary-team');
             var nums = row.querySelectorAll('.ft-summary-num');
-            rows.push({
+            rowsLegacy.push({
                 team: teamEl ? safeText(teamEl) : '',
                 round: nums[0] ? safeText(nums[0]) : '',
                 total: nums[1] ? safeText(nums[1]) : ''
             });
         });
-        var foot = root.querySelector('.ft-summary-footnote');
+        var footL = root.querySelector('.ft-summary-footnote');
         return {
-            rows: rows,
-            footnote: foot ? safeText(foot) : ''
+            columnHeaders: [],
+            rows: rowsLegacy,
+            footnote: footL ? safeText(footL) : ''
         };
     }
 
@@ -230,6 +262,7 @@
                 return {
                     variant: 'flexible-round',
                     title: 'Итоги раунда',
+                    columnHeaders: fs.columnHeaders || [],
                     rows: fs.rows,
                     footnote: fs.footnote
                 };
@@ -371,7 +404,8 @@
                 flexibleExplainer: flexibleExplainer,
                 hallScoreboard: hallScoreboard,
                 skipsRemaining: gs && gs.maxSkipsAllowed > 0 ? gs.skipsRemaining : null,
-                maxSkipsAllowed: gs && gs.maxSkipsAllowed > 0 ? gs.maxSkipsAllowed : null
+                maxSkipsAllowed: gs && gs.maxSkipsAllowed > 0 ? gs.maxSkipsAllowed : null,
+                awaitingCustomWordPack: !!(gs && gs.awaitingCustomWordPack)
             }
         };
     }
@@ -510,7 +544,10 @@
         'resetFlexibleTournamentPersisted',
         'addFlexibleTeamQuick',
         'addFlexibleTeamFromForm',
-        'removeFlexibleTeam'
+        'removeFlexibleTeam',
+        'startFlexibleTeamEdit',
+        'cancelFlexibleTeamEdit',
+        'saveFlexibleTeamEdit'
     ].forEach(wrapPost);
 
     window.addEventListener('load', function () {

@@ -18,7 +18,11 @@ let gameState = {
     correctWords: [], // Список отгаданных слов
     skippedWordsList: [], // Список пропущенных слов
     maxSkipsAllowed: 0,
-    skipsRemaining: 0
+    skipsRemaining: 0,
+    /** Пользовательский пакет исчерпан: пауза и окно дозагрузки .txt */
+    awaitingCustomWordPack: false,
+    /** Раунд начался без слов (пакет пуст) — после дозагрузки нужен отсчёт/таймер как при обычном старте */
+    timerNeverStarted: false
 };
 
 // Настройки по умолчанию
@@ -62,13 +66,15 @@ let competitiveState = {
     prepTimer: null
 };
 
-/** Гибкий турнир: пул команд, раунды по 1–3 команды, ротация объясняющих по кругу команд */
+/** Гибкий турнир: пул команд, раунды по 1–16 команд */
+const FLEXIBLE_MAX_TEAMS_IN_ROUND = 16;
+
 let flexibleTournamentState = {
     isFlexibleMode: false,
     teams: [],
     pendingRoundTeamIndices: null,
     roundTeamIndices: [],
-    /** Индекс текущего хода в раунде (0 … maxИгроков×k − 1): круг = floor(index/k), в круге каждая команда раз */
+    /** Индекс текущего хода в раунде (0 … круги×k − 1) */
     flexibleTurnIndex: 0,
     roundScores: [],
     roundPlayerResults: [],
@@ -79,7 +85,9 @@ let flexibleTournamentState = {
     /** null / пусто = число кругов по самой большой команде; иначе явное число кругов (1…50) */
     roundCirclesOverride: null,
     /** Сколько игроков «Игрок 1…» при быстром добавлении команды */
-    defaultPlayersForQuickAdd: 3
+    defaultPlayersForQuickAdd: 3,
+    /** interleaved — по одному с каждой команды по кругу; byTeam — сначала все ходы первой команды, затем второй */
+    turnOrder: 'interleaved'
 };
 
 const FLEXIBLE_STORAGE_KEY = 'alias-standalone-flexible-v1';
@@ -102,7 +110,8 @@ function writeFlexibleTournamentToStorage() {
             gameTime: flexibleTournamentState.gameTime,
             maxSkipsPerTurn: flexibleTournamentState.maxSkipsPerTurn,
             roundCirclesOverride: flexibleTournamentState.roundCirclesOverride,
-            defaultPlayersForQuickAdd: flexibleTournamentState.defaultPlayersForQuickAdd
+            defaultPlayersForQuickAdd: flexibleTournamentState.defaultPlayersForQuickAdd,
+            turnOrder: flexibleTournamentState.turnOrder === 'byTeam' ? 'byTeam' : 'interleaved'
         };
         localStorage.setItem(FLEXIBLE_STORAGE_KEY, JSON.stringify(payload));
     } catch (_) {}
@@ -139,6 +148,7 @@ function applyFlexibleSnapshotToState(snap) {
     }
     const dq = parseInt(snap.defaultPlayersForQuickAdd, 10);
     flexibleTournamentState.defaultPlayersForQuickAdd = !Number.isNaN(dq) && dq >= 1 ? Math.min(dq, 20) : 3;
+    flexibleTournamentState.turnOrder = snap.turnOrder === 'byTeam' ? 'byTeam' : 'interleaved';
 }
 
 function clearFlexibleRoundProgressOnly() {
@@ -157,6 +167,8 @@ function resetFlexibleTournamentPersisted() {
     flexibleTournamentState.maxSkipsPerTurn = 0;
     flexibleTournamentState.roundCirclesOverride = null;
     flexibleTournamentState.defaultPlayersForQuickAdd = 3;
+    flexibleTournamentState.turnOrder = 'interleaved';
+    flexibleEditingTeamIndex = null;
     clearFlexibleRoundProgressOnly();
     try {
         localStorage.removeItem(FLEXIBLE_STORAGE_KEY);
@@ -177,6 +189,12 @@ function syncFlexibleTournamentFormFields() {
     if (rc) rc.value = flexibleTournamentState.roundCirclesOverride != null ? String(flexibleTournamentState.roundCirclesOverride) : '';
     const dq = document.getElementById('flexible-quick-default-players');
     if (dq) dq.value = String(flexibleTournamentState.defaultPlayersForQuickAdd || 3);
+    const ordByTeam = document.getElementById('flexible-turn-order-by-team');
+    const ordInter = document.getElementById('flexible-turn-order-interleaved');
+    if (ordByTeam && ordInter) {
+        if (flexibleTournamentState.turnOrder === 'byTeam') ordByTeam.checked = true;
+        else ordInter.checked = true;
+    }
 }
 
 function readFlexibleSettingsFromForm() {
@@ -205,6 +223,8 @@ function readFlexibleSettingsFromForm() {
         const d = parseInt(dqEl.value, 10);
         flexibleTournamentState.defaultPlayersForQuickAdd = !Number.isNaN(d) && d >= 1 ? Math.min(d, 20) : 3;
     }
+    const ordEl = document.querySelector('input[name="flexible-turn-order"]:checked');
+    flexibleTournamentState.turnOrder = ordEl && ordEl.value === 'byTeam' ? 'byTeam' : 'interleaved';
 }
 
 function setupFlexibleTournamentFormListeners() {
@@ -212,6 +232,14 @@ function setupFlexibleTournamentFormListeners() {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('change', () => {
+            if (!flexibleTournamentState.isFlexibleMode) return;
+            readFlexibleSettingsFromForm();
+            writeFlexibleTournamentToStorage();
+            if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+        });
+    });
+    document.querySelectorAll('input[name="flexible-turn-order"]').forEach(r => {
+        r.addEventListener('change', () => {
             if (!flexibleTournamentState.isFlexibleMode) return;
             readFlexibleSettingsFromForm();
             writeFlexibleTournamentToStorage();
@@ -228,9 +256,109 @@ document.addEventListener('DOMContentLoaded', function() {
     updateWordSourceUI();
     setupKeyboardControls();
     setupCustomPackControls();
+    setupCustomPackDepletedOverlay();
     setupFlexibleTournamentFormListeners();
     updateMainInfoBanner();
 });
+
+/** Сохранить пользовательский пакет и сбросить «уже сыграно» */
+function installCustomWordPack(words, fileName) {
+    CUSTOM_WORDS = words;
+    try {
+        localStorage.setItem('alias-custom-words', JSON.stringify(words));
+    } catch (_) {}
+    CUSTOM_WORDS_META = { fileName: fileName || 'custom.txt', usedCount: 0, total: words.length };
+    try {
+        localStorage.setItem('alias-custom-words-meta', JSON.stringify(CUSTOM_WORDS_META));
+    } catch (_) {}
+    CUSTOM_WORDS_USED = new Set();
+    try {
+        localStorage.removeItem('alias-custom-words-used');
+    } catch (_) {}
+    updateCustomPackStatus();
+    updateMainInfoBanner();
+}
+
+function openCustomWordPackDepletedOverlay() {
+    const el = document.getElementById('custom-pack-depleted-overlay');
+    if (el) el.classList.remove('hidden');
+}
+
+function closeCustomWordPackDepletedOverlay() {
+    const el = document.getElementById('custom-pack-depleted-overlay');
+    if (el) el.classList.add('hidden');
+}
+
+function pauseForCustomWordPack() {
+    gameState.isPaused = true;
+    gameState.awaitingCustomWordPack = true;
+    const prep = document.getElementById('competitive-prep');
+    if (prep) prep.style.display = 'none';
+    openCustomWordPackDepletedOverlay();
+    showCurrentWord();
+    updateGameUI();
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function setupCustomPackDepletedOverlay() {
+    const importBtn = document.getElementById('custom-pack-depleted-import');
+    const endBtn = document.getElementById('custom-pack-depleted-endgame');
+    const fileInput = document.getElementById('custom-pack-depleted-input');
+    if (importBtn) {
+        importBtn.addEventListener('click', async () => {
+            const files = fileInput && fileInput.files ? Array.from(fileInput.files) : [];
+            if (!files.length) {
+                showNotification('Выберите файл .txt');
+                return;
+            }
+            try {
+                const words = await parseWordFile(files[0]);
+                installCustomWordPack(words, files[0].name || 'custom.txt');
+                const WORDS_BATCH_SIZE = 50;
+                const more = getWordsForCurrentSource(gameState.category, WORDS_BATCH_SIZE) || [];
+                if (!more.length) {
+                    showNotification('В файле нет ни одного слова');
+                    return;
+                }
+                gameState.words.push(...more);
+                gameState.awaitingCustomWordPack = false;
+                gameState.isPaused = false;
+                closeCustomWordPackDepletedOverlay();
+                if (fileInput) fileInput.value = '';
+
+                if (gameState.timerNeverStarted) {
+                    gameState.timerNeverStarted = false;
+                    if (competitiveState.isCompetitiveMode) {
+                        updateGameUI();
+                        startCompetitivePreparation();
+                    } else {
+                        const ftTurn = flexibleTournamentState.isFlexibleMode ? getFlexibleCurrentTurn() : null;
+                        const prepLabel = ftTurn ? `${ftTurn.team.name} — ${ftTurn.playerName}` : null;
+                        updateGameUI();
+                        startRoundPreparation(3, prepLabel, () => {
+                            startTimer();
+                            showCurrentWord();
+                        });
+                    }
+                } else {
+                    showCurrentWord();
+                    updateGameUI();
+                }
+                showNotification('Пакет загружен, игра продолжается');
+                if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+            } catch (e) {
+                console.error(e);
+                showNotification(e && e.message ? String(e.message) : 'Ошибка загрузки файла');
+            }
+        });
+    }
+    if (endBtn) {
+        endBtn.addEventListener('click', () => {
+            closeCustomWordPackDepletedOverlay();
+            endGame();
+        });
+    }
+}
 
 // Настройка UI и событий для пользовательских паков
 function setupCustomPackControls() {
@@ -263,16 +391,8 @@ function setupCustomPackControls() {
             }
             try {
                 const words = await parseWordFile(files[0]);
-                CUSTOM_WORDS = words;
-                localStorage.setItem('alias-custom-words', JSON.stringify(words));
-                CUSTOM_WORDS_META = { fileName: files[0].name || 'custom.txt', usedCount: 0, total: words.length };
-                localStorage.setItem('alias-custom-words-meta', JSON.stringify(CUSTOM_WORDS_META));
-                // сбрасываем историю использования слов при загрузке нового пакета
-                CUSTOM_WORDS_USED = new Set();
-                localStorage.removeItem('alias-custom-words-used');
-                updateCustomPackStatus();
+                installCustomWordPack(words, files[0].name || 'custom.txt');
                 showNotification('Файл загружен!');
-                updateMainInfoBanner();
             } catch (e) {
                 console.error(e);
                 showNotification('Ошибка загрузки файла');
@@ -412,6 +532,7 @@ function showScreen(screenId) {
 
 // Сброс UI и таймеров перед сменой режима/экрана
 function resetGameUI() {
+    closeCustomWordPackDepletedOverlay();
     // Останавливаем любые таймеры
     if (gameState && gameState.timerInterval) {
         clearInterval(gameState.timerInterval);
@@ -436,6 +557,8 @@ function resetGameUI() {
     gameState.timeRemaining = settings.gameTime;
     gameState.maxSkipsAllowed = 0;
     gameState.skipsRemaining = 0;
+    gameState.awaitingCustomWordPack = false;
+    gameState.timerNeverStarted = false;
 
     // Сбрасываем визуальные элементы игрового экрана
     const timerElement = document.getElementById('timer');
@@ -459,6 +582,8 @@ function resetGameUI() {
     if (scoreEl) scoreEl.textContent = '0';
     if (wordEl) wordEl.textContent = '';
     if (wordNumEl) wordNumEl.textContent = '0';
+    const wordStatWrap = document.getElementById('host-word-stat-wrap');
+    if (wordStatWrap) wordStatWrap.style.display = '';
     if (correctWordsContainer) correctWordsContainer.innerHTML = '';
     if (skippedWordsContainer) skippedWordsContainer.innerHTML = '';
     if (correctCount) correctCount.textContent = '0';
@@ -475,6 +600,7 @@ function resetGameUI() {
 
 function showMainMenu() {
     // При входе в главное меню выходим из соревновательного режима
+    closeCustomWordPackDepletedOverlay();
     competitiveState.isCompetitiveMode = false;
     flexibleTournamentState.isFlexibleMode = false;
     const sb = document.getElementById('competitive-scoreboard');
@@ -540,9 +666,44 @@ function startGame() {
         }
     }
 
+    if (!words.length && settings.wordSource === 'custom') {
+        gameState = {
+            isPlaying: true,
+            isPaused: true,
+            awaitingCustomWordPack: true,
+            timerNeverStarted: true,
+            currentWordIndex: 0,
+            correctAnswers: 0,
+            skippedWords: 0,
+            totalWords: 0,
+            timeLimit: gameTime,
+            timeRemaining: gameTime,
+            words: [],
+            category: category,
+            startTime: Date.now(),
+            timerInterval: null,
+            score: 0,
+            correctWords: [],
+            skippedWordsList: [],
+            maxSkipsAllowed,
+            skipsRemaining
+        };
+        updateGameUI();
+        showScreen('game-screen');
+        const prep = document.getElementById('competitive-prep');
+        if (prep) prep.style.display = 'none';
+        showCurrentWord();
+        openCustomWordPackDepletedOverlay();
+        showNotification('Слова в пакете закончились — загрузите новый файл');
+        if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+        return;
+    }
+
     gameState = {
         isPlaying: true,
         isPaused: false,
+        awaitingCustomWordPack: false,
+        timerNeverStarted: false,
         currentWordIndex: 0,
         correctAnswers: 0,
         skippedWords: 0,
@@ -580,13 +741,12 @@ function startGame() {
 function getWordsForCurrentSource(category, count) {
     if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
         const words = CUSTOM_WORDS;
-        if (!words.length) return Array(count).fill('СЛОВО');
-        
+        if (!words.length) return [];
+
         // Берем только неиспользованные слова
         const remaining = words.filter(w => !CUSTOM_WORDS_USED.has(w));
         if (remaining.length === 0) {
-            showNotification('Слова в пользовательском пакете закончились. Очистите пакет или загрузите новый.');
-            return Array(Math.min(count, words.length)).fill('СЛОВО');
+            return [];
         }
         const shuffled = [...remaining].sort(() => 0.5 - Math.random());
         const taken = shuffled.slice(0, Math.min(count, remaining.length));
@@ -601,6 +761,10 @@ function getWordsForCurrentSource(category, count) {
 
 // Запуск таймера
 function startTimer() {
+    if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+        gameState.timerInterval = null;
+    }
     gameState.timerInterval = setInterval(() => {
         if (!gameState.isPaused) {
             gameState.timeRemaining--;
@@ -661,13 +825,18 @@ function updateTimer() {
 
 // Показ текущего слова
 function showCurrentWord() {
+    const wordElement = document.getElementById('current-word');
     if (gameState.currentWordIndex < gameState.words.length) {
-        const wordElement = document.getElementById('current-word');
         const current = gameState.words[gameState.currentWordIndex];
-        wordElement.textContent = current;
-        document.getElementById('current-word-number').textContent = gameState.currentWordIndex + 1;
+        if (wordElement) wordElement.textContent = current;
+        const wn = document.getElementById('current-word-number');
+        if (wn) wn.textContent = gameState.currentWordIndex + 1;
         // Немедленно помечаем слово как использованное (для пользовательских пакетов)
         markWordAsUsedImmediate(current);
+    } else {
+        if (wordElement) {
+            wordElement.textContent = gameState.awaitingCustomWordPack ? '—' : '';
+        }
     }
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
@@ -708,7 +877,14 @@ function nextWord() {
     if (gameState.currentWordIndex >= gameState.words.length) {
         const WORDS_BATCH_SIZE = 50;
         const more = getWordsForCurrentSource(gameState.category, WORDS_BATCH_SIZE) || [];
-        if (!more.length) { endGame(); return; }
+        if (!more.length) {
+            if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
+                pauseForCustomWordPack();
+                return;
+            }
+            endGame();
+            return;
+        }
         gameState.words.push(...more);
     }
     showCurrentWord();
@@ -723,6 +899,10 @@ function calculateWordScore() {
 // Пауза/возобновление/завершение
 function pauseGame() {
     if (!gameState.isPlaying) return;
+    if (gameState.awaitingCustomWordPack) {
+        showNotification('Сначала загрузите новый пакет слов в окне на экране игры');
+        return;
+    }
     gameState.isPaused = true;
     document.getElementById('pause-time').textContent = gameState.timeRemaining + ' сек';
     document.getElementById('pause-score').textContent = gameState.score;
@@ -731,6 +911,10 @@ function pauseGame() {
 }
 
 function resumeGame() {
+    if (gameState.awaitingCustomWordPack) {
+        showNotification('Сначала загрузите файл со словами');
+        return;
+    }
     gameState.isPaused = false;
     showScreen('game-screen');
     updateHostPlayingScoreboard();
@@ -738,6 +922,8 @@ function resumeGame() {
 }
 
 function endGame() {
+    closeCustomWordPackDepletedOverlay();
+    if (gameState) gameState.awaitingCustomWordPack = false;
     // Сбрасываем состояние игры независимо от текущего состояния
     gameState.isPlaying = false;
     gameState.isPaused = false; // Убираем паузу если она была
@@ -1552,13 +1738,35 @@ function updateGameUI() {
     const skipLimVal = document.getElementById('host-skip-limit-val');
     const lim = gameState.maxSkipsAllowed > 0 ? gameState.maxSkipsAllowed : 0;
     const rem = gameState.skipsRemaining != null ? gameState.skipsRemaining : 0;
+    const activeScreen = document.querySelector('.screen.active');
+    const sid = activeScreen ? activeScreen.id : '';
+    const flexRound =
+        flexibleTournamentState.isFlexibleMode &&
+        flexibleTournamentState.roundTeamIndices &&
+        flexibleTournamentState.roundTeamIndices.length > 0;
+    const wordStatWrap = document.getElementById('host-word-stat-wrap');
+    if (wordStatWrap) {
+        wordStatWrap.style.display = flexRound && sid === 'game-screen' ? 'none' : '';
+    }
     if (skipLimWrap && skipLimVal) {
         if (lim > 0) {
             skipLimWrap.style.display = '';
-            skipLimVal.textContent = String(rem);
+            if (flexRound && sid === 'game-screen') {
+                const used = Math.max(0, lim - rem);
+                skipLimVal.textContent = `${used}/${lim}`;
+            } else {
+                skipLimVal.textContent = String(rem);
+            }
         } else {
             skipLimWrap.style.display = 'none';
         }
+    }
+    if (skipLimWrap) {
+        skipLimWrap.classList.toggle('host-skip-depleted', lim > 0 && rem <= 0);
+    }
+    const gameStats = document.getElementById('host-game-stats');
+    if (gameStats) {
+        gameStats.classList.toggle('host-game-stats--prominent', !!(flexRound && sid === 'game-screen'));
     }
     if (skipBtn) {
         if (lim > 0 && rem <= 0 && gameState.isPlaying && !gameState.isPaused) {
@@ -1589,6 +1797,8 @@ function updateHostPlayingScoreboard() {
     const sid = active ? active.id : '';
     if (sid !== 'game-screen') {
         bar.classList.add('hidden');
+        bar.classList.remove('host-ft-playing-board');
+        inner.className = 'host-playing-scoreboard-inner';
         return;
     }
     const live = gameState.isPlaying && !gameState.isPaused;
@@ -1597,6 +1807,7 @@ function updateHostPlayingScoreboard() {
 
     if (flexibleTournamentState.isFlexibleMode && flexibleTournamentState.roundTeamIndices && flexibleTournamentState.roundTeamIndices.length) {
         bar.classList.remove('hidden');
+        bar.classList.add('host-ft-playing-board');
         const turn = typeof getFlexibleCurrentTurn === 'function' ? getFlexibleCurrentTurn() : null;
         const idxs = flexibleTournamentState.roundTeamIndices;
         const scores = flexibleTournamentState.roundScores || [];
@@ -1605,11 +1816,16 @@ function updateHostPlayingScoreboard() {
             let sc = scores[i] != null ? scores[i] : 0;
             if (live && turn && turn.slot === i) sc += Math.round(gameState.score);
             const nm = t ? t.name : '—';
-            return `<span class="host-sb-pill"><span class="host-sb-name">${escapeHtmlFlexible(nm)}</span> <strong class="host-sb-num">${Math.round(sc)}</strong></span>`;
+            const activeCard = live && turn && turn.slot === i ? ' host-ft-card--active' : '';
+            return `<div class="host-ft-score-card${activeCard}"><span class="host-ft-card-name">${escapeHtmlFlexible(nm)}</span><strong class="host-ft-card-num">${Math.round(sc)}</strong></div>`;
         });
+        inner.className = 'host-playing-scoreboard-inner host-ft-playing-inner';
         inner.innerHTML = parts.join('');
         return;
     }
+
+    bar.classList.remove('host-ft-playing-board');
+    inner.className = 'host-playing-scoreboard-inner';
 
     if (tournamentState.isTournamentMode) {
         const currentMatch = tournamentState.matches[tournamentState.currentMatch];
@@ -1844,11 +2060,15 @@ window.exportMatchResults = exportMatchResults;
 window.showFlexibleTournamentFromMenu = showFlexibleTournamentFromMenu;
 window.addFlexibleTeamFromForm = addFlexibleTeamFromForm;
 window.removeFlexibleTeam = removeFlexibleTeam;
+window.startFlexibleTeamEdit = startFlexibleTeamEdit;
+window.cancelFlexibleTeamEdit = cancelFlexibleTeamEdit;
+window.saveFlexibleTeamEdit = saveFlexibleTeamEdit;
 window.callFlexibleTeams = callFlexibleTeams;
 window.showFlexibleTournamentSetupFromCall = showFlexibleTournamentSetupFromCall;
 window.startFlexibleRoundFromCall = startFlexibleRoundFromCall;
 window.startNextFlexiblePlayer = startNextFlexiblePlayer;
 window.endFlexibleRound = endFlexibleRound;
+window.endFlexibleRoundWithConfirm = endFlexibleRoundWithConfirm;
 window.cancelFlexibleRound = cancelFlexibleRound;
 window.flexibleAfterRoundToSetup = flexibleAfterRoundToSetup;
 window.resetFlexibleTournamentPersisted = resetFlexibleTournamentPersisted;
@@ -1888,6 +2108,7 @@ function showFlexibleTournamentFromMenu() {
             flexibleTournamentState.maxSkipsPerTurn = 0;
             flexibleTournamentState.roundCirclesOverride = null;
             flexibleTournamentState.defaultPlayersForQuickAdd = 3;
+            flexibleTournamentState.turnOrder = 'interleaved';
         }
     }
 
@@ -1932,6 +2153,7 @@ function addFlexibleTeam(name, players) {
         name: String(name).trim(),
         players: players.map(p => String(p).trim()).filter(Boolean)
     });
+    flexibleEditingTeamIndex = null;
     renderFlexibleTeamsList();
     renderFlexibleRoundTeamCheckboxes();
     writeFlexibleTournamentToStorage();
@@ -1964,38 +2186,156 @@ function addFlexibleTeamQuick() {
 }
 
 function removeFlexibleTeam(index) {
+    if (flexibleEditingTeamIndex !== null) {
+        if (flexibleEditingTeamIndex === index) flexibleEditingTeamIndex = null;
+        else if (flexibleEditingTeamIndex > index) flexibleEditingTeamIndex--;
+    }
     flexibleTournamentState.teams.splice(index, 1);
     renderFlexibleTeamsList();
     renderFlexibleRoundTeamCheckboxes();
     writeFlexibleTournamentToStorage();
 }
 
+/** Индекс команды в режиме редактирования в блоке «Команды» (null = никто) */
+let flexibleEditingTeamIndex = null;
+
+function startFlexibleTeamEdit(index) {
+    if (index < 0 || index >= flexibleTournamentState.teams.length) return;
+    flexibleEditingTeamIndex = index;
+    renderFlexibleTeamsList();
+}
+
+function cancelFlexibleTeamEdit() {
+    flexibleEditingTeamIndex = null;
+    renderFlexibleTeamsList();
+}
+
+function saveFlexibleTeamEdit(index) {
+    if (index < 0 || index >= flexibleTournamentState.teams.length) return;
+    const nameInp = document.getElementById(`flexible-edit-name-${index}`);
+    const plInp = document.getElementById(`flexible-edit-players-${index}`);
+    const name = nameInp ? String(nameInp.value || '').trim() : '';
+    const players = (plInp ? String(plInp.value || '') : '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    if (!name) {
+        showNotification('Введите название команды');
+        return;
+    }
+    if (!players.length) {
+        showNotification('Добавьте хотя бы одного игрока');
+        return;
+    }
+    flexibleTournamentState.teams[index] = { name, players };
+    flexibleEditingTeamIndex = null;
+    renderFlexibleTeamsList();
+    renderFlexibleRoundTeamCheckboxes();
+    writeFlexibleTournamentToStorage();
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
 function renderFlexibleTeamsList() {
     const list = document.getElementById('flexible-teams-list');
     if (!list) return;
+    if (flexibleEditingTeamIndex != null && flexibleEditingTeamIndex >= flexibleTournamentState.teams.length) {
+        flexibleEditingTeamIndex = null;
+    }
     list.innerHTML = '';
     flexibleTournamentState.teams.forEach((team, index) => {
         const row = document.createElement('div');
-        row.className = 'team-item';
-        row.innerHTML = `
-            <div class="team-info">
-                <h4>${team.name}</h4>
-                <p>Игроки: ${team.players.join(', ')}</p>
-            </div>
-            <button type="button" class="btn btn-danger btn-small" onclick="removeFlexibleTeam(${index})">Удалить</button>
-        `;
+        row.className = 'team-item' + (flexibleEditingTeamIndex === index ? ' team-item--editing' : '');
+
+        if (flexibleEditingTeamIndex === index) {
+            const fields = document.createElement('div');
+            fields.className = 'team-edit-fields';
+
+            const g1 = document.createElement('div');
+            g1.className = 'form-group';
+            const l1 = document.createElement('label');
+            l1.htmlFor = `flexible-edit-name-${index}`;
+            l1.textContent = 'Название команды';
+            const nameInp = document.createElement('input');
+            nameInp.type = 'text';
+            nameInp.id = `flexible-edit-name-${index}`;
+            nameInp.value = team.name;
+            g1.appendChild(l1);
+            g1.appendChild(nameInp);
+
+            const g2 = document.createElement('div');
+            g2.className = 'form-group';
+            const l2 = document.createElement('label');
+            l2.htmlFor = `flexible-edit-players-${index}`;
+            l2.textContent = 'Игроки (через запятую)';
+            const plInp = document.createElement('input');
+            plInp.type = 'text';
+            plInp.id = `flexible-edit-players-${index}`;
+            plInp.value = team.players.join(', ');
+            g2.appendChild(l2);
+            g2.appendChild(plInp);
+
+            fields.appendChild(g1);
+            fields.appendChild(g2);
+
+            const btns = document.createElement('div');
+            btns.className = 'team-edit-buttons';
+            const saveBtn = document.createElement('button');
+            saveBtn.type = 'button';
+            saveBtn.className = 'btn btn-primary btn-small';
+            saveBtn.textContent = 'Сохранить';
+            saveBtn.addEventListener('click', () => saveFlexibleTeamEdit(index));
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'btn btn-secondary btn-small';
+            cancelBtn.textContent = 'Отмена';
+            cancelBtn.addEventListener('click', cancelFlexibleTeamEdit);
+            btns.appendChild(saveBtn);
+            btns.appendChild(cancelBtn);
+
+            row.appendChild(fields);
+            row.appendChild(btns);
+            list.appendChild(row);
+            return;
+        }
+
+        const info = document.createElement('div');
+        info.className = 'team-info';
+        const h4 = document.createElement('h4');
+        h4.textContent = team.name;
+        const p = document.createElement('p');
+        p.textContent = `Игроки: ${team.players.join(', ')}`;
+        info.appendChild(h4);
+        info.appendChild(p);
+
+        const actions = document.createElement('div');
+        actions.className = 'team-item-actions-inline';
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-secondary btn-small';
+        editBtn.textContent = 'Изменить';
+        editBtn.addEventListener('click', () => startFlexibleTeamEdit(index));
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-danger btn-small';
+        delBtn.textContent = 'Удалить';
+        delBtn.addEventListener('click', () => removeFlexibleTeam(index));
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        row.appendChild(info);
+        row.appendChild(actions);
         list.appendChild(row);
     });
 }
 
 function enforceFlexibleRoundPickLimit() {
     const boxes = [...document.querySelectorAll('.ft-round-pick:checked')];
-    if (boxes.length <= 3) return;
+    if (boxes.length <= FLEXIBLE_MAX_TEAMS_IN_ROUND) return;
     boxes.sort((a, b) => (parseInt(a.dataset.teamIndex, 10) || 0) - (parseInt(b.dataset.teamIndex, 10) || 0));
-    for (let i = 3; i < boxes.length; i++) {
+    for (let i = FLEXIBLE_MAX_TEAMS_IN_ROUND; i < boxes.length; i++) {
         boxes[i].checked = false;
     }
-    showNotification('В раунде не больше трёх команд');
+    showNotification(`В раунде не больше ${FLEXIBLE_MAX_TEAMS_IN_ROUND} команд`);
 }
 
 function renderFlexibleRoundTeamCheckboxes() {
@@ -2033,11 +2373,11 @@ function callFlexibleTeams() {
     writeFlexibleTournamentToStorage();
     const picks = getSelectedFlexibleRoundTeamIndices();
     if (picks.length < 1) {
-        showNotification('Выберите от одной до трёх команд');
+        showNotification(`Выберите от одной до ${FLEXIBLE_MAX_TEAMS_IN_ROUND} команд`);
         return;
     }
-    if (picks.length > 3) {
-        showNotification('Не больше трёх команд в раунде');
+    if (picks.length > FLEXIBLE_MAX_TEAMS_IN_ROUND) {
+        showNotification(`Не больше ${FLEXIBLE_MAX_TEAMS_IN_ROUND} команд в раунде`);
         return;
     }
     for (const idx of picks) {
@@ -2071,8 +2411,8 @@ function showFlexibleTournamentSetupFromCall() {
 
 function startFlexibleRoundFromCall() {
     const picks = (flexibleTournamentState.pendingRoundTeamIndices || []).slice();
-    if (picks.length < 1 || picks.length > 3) {
-        showNotification('Вернитесь к настройке и выберите 1–3 команды');
+    if (picks.length < 1 || picks.length > FLEXIBLE_MAX_TEAMS_IN_ROUND) {
+        showNotification(`Вернитесь к настройке и выберите 1–${FLEXIBLE_MAX_TEAMS_IN_ROUND} команд`);
         showScreen('flexible-tournament-setup');
         return;
     }
@@ -2127,12 +2467,21 @@ function getFlexibleCurrentTurn() {
     const tix = fts.flexibleTurnIndex || 0;
     if (tix >= total) return null;
 
-    const slot = tix % k;
-    const circle = Math.floor(tix / k);
+    const byTeam = fts.turnOrder === 'byTeam';
+    let slot;
+    let circleZeroBased;
+    if (byTeam) {
+        slot = Math.floor(tix / circleCount);
+        circleZeroBased = tix % circleCount;
+    } else {
+        slot = tix % k;
+        circleZeroBased = Math.floor(tix / k);
+    }
+
     const teamGlobalIdx = idxs[slot];
     const team = fts.teams[teamGlobalIdx];
     if (!team || !team.players || !team.players.length) return null;
-    const playerIndex = circle % team.players.length;
+    const playerIndex = circleZeroBased % team.players.length;
     const playerName = team.players[playerIndex];
     return {
         slot,
@@ -2140,10 +2489,11 @@ function getFlexibleCurrentTurn() {
         team,
         playerName,
         playerIndex,
-        circle: circle + 1,
+        circle: circleZeroBased + 1,
         circleMax: circleCount,
         turnInRound: tix + 1,
-        turnMax: total
+        turnMax: total,
+        turnOrder: byTeam ? 'byTeam' : 'interleaved'
     };
 }
 
@@ -2178,9 +2528,14 @@ function updateFlexibleMatchScreen() {
     const circlesHint = hasOverride
         ? `задано вручную: <strong>${circleCount}</strong> (без учёта «${natural}» по составу; в маленьких командах игроки повторяются по кругу)`
         : `по числу игроков в самой большой команде (<strong>${natural}</strong>); в маленьких командах игроки повторяются по кругу`;
+    const orderHint =
+        flexibleTournamentState.turnOrder === 'byTeam'
+            ? 'подряд по командам: сначала все ходы первой выбранной команды, затем второй и т.д.'
+            : 'по кругу команд: в каждом круге по одному объясняющему с каждой команды по очереди';
     info.innerHTML = `
         <h3>Раунд гибкого турнира</h3>
         <p><strong>Кругов в раунде:</strong> ${circlesHint}</p>
+        <p><strong>Порядок ходов:</strong> ${orderHint}</p>
         <p><strong>Команд в раунде:</strong> ${idxs.length} · <strong>Всего ходов:</strong> ${totalTurns}</p>
         <div class="ft-score-strip">${pills}</div>
     `;
@@ -2206,12 +2561,18 @@ function updateFlexiblePlayerInfo() {
         return;
     }
     const k = flexibleTournamentState.roundTeamIndices.length;
+    const isByTeam = turn.turnOrder === 'byTeam';
+    const circleLabel = isByTeam ? 'Ход в команде' : 'Круг';
+    const posLabel = isByTeam ? 'Команда в раунде' : 'Порядок команд в круге';
+    const posLine = isByTeam
+        ? `<p><strong>${posLabel}:</strong> ${turn.slot + 1} из ${k}</p>`
+        : `<p><strong>${posLabel}:</strong> место ${turn.slot + 1} из ${k}</p>`;
     el.innerHTML = `
         <h3>Следующий ход</h3>
         <p><strong>Команда:</strong> ${turn.team.name}</p>
         <p><strong>Объясняет:</strong> ${turn.playerName}</p>
-        <p><strong>Круг:</strong> ${turn.circle} из ${turn.circleMax} · <strong>Ход в раунде:</strong> ${turn.turnInRound} из ${turn.turnMax}</p>
-        <p><strong>Порядок команд в круге:</strong> место ${turn.slot + 1} из ${k}</p>
+        <p><strong>${circleLabel}:</strong> ${turn.circle} из ${turn.circleMax} · <strong>Ход в раунде:</strong> ${turn.turnInRound} из ${turn.turnMax}</p>
+        ${posLine}
     `;
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
@@ -2262,6 +2623,47 @@ function endFlexiblePlayerTurn() {
     showScreen('flexible-tournament-match');
 }
 
+function endFlexibleRoundWithConfirm() {
+    const msg =
+        'Завершить раунд? Очки сыгранных ходов попадут в таблицу (по игрокам и в «Итого» команды), колонка «В турнире» обновится. Несыгранные ходы этого раунда отменяются.';
+    if (!confirm(msg)) return;
+    endFlexibleRound();
+}
+
+/** Суммы очков за раунд по паре (индекс команды в турнире, индекс игрока в составе). */
+function aggregateFlexibleRoundScoresByTeamPlayer(roundPlayerResults) {
+    const map = new Map();
+    (roundPlayerResults || []).forEach((r) => {
+        const ti = r.teamGlobalIndex;
+        const pi = r.playerIndex;
+        if (ti == null || pi == null) return;
+        const key = `${ti}:${pi}`;
+        const add = Math.round(Number(r.score)) || 0;
+        map.set(key, (map.get(key) || 0) + add);
+    });
+    return map;
+}
+
+/** Подписи колонок: по j-му слоту состава — уникальные имена из ростеров команд раунда. */
+function getFlexibleRoundSummaryPlayerColumnHeaders(idxs, teams, maxP) {
+    const headers = [];
+    for (let j = 0; j < maxP; j++) {
+        const seen = new Set();
+        const names = [];
+        idxs.forEach((ti) => {
+            const t = teams[ti];
+            const raw = t && t.players && t.players[j] != null ? String(t.players[j]).trim() : '';
+            if (!raw) return;
+            const lk = raw.toLowerCase();
+            if (seen.has(lk)) return;
+            seen.add(lk);
+            names.push(raw);
+        });
+        headers.push(names.length ? names.join(' / ') : `Игрок ${j + 1}`);
+    }
+    return headers;
+}
+
 function endFlexibleRound() {
     const idxs = flexibleTournamentState.roundTeamIndices;
     if (!idxs || !idxs.length) {
@@ -2270,41 +2672,54 @@ function endFlexibleRound() {
     }
     const totals = flexibleTournamentState.totalScoresByTeam;
     const scores = flexibleTournamentState.roundScores || [];
-    let rows = '';
+    const teams = flexibleTournamentState.teams;
     idxs.forEach((ti, i) => {
-        const t = flexibleTournamentState.teams[ti];
+        const t = teams[ti];
         const rsc = scores[i] != null ? scores[i] : 0;
         if (t) {
             totals[ti] = (totals[ti] || 0) + rsc;
         }
     });
+
+    const maxP = idxs.reduce((m, ti) => {
+        const t = teams[ti];
+        const n = t && t.players ? t.players.length : 0;
+        return Math.max(m, n);
+    }, 0);
+    const columnHeaders = getFlexibleRoundSummaryPlayerColumnHeaders(idxs, teams, maxP);
+    const agg = aggregateFlexibleRoundScoresByTeamPlayer(flexibleTournamentState.roundPlayerResults);
+    const colTpl =
+        maxP === 0
+            ? 'minmax(6.5rem, 1.35fr) minmax(3.25rem, auto) minmax(3.25rem, auto)'
+            : `minmax(6.5rem, 1.2fr) repeat(${maxP}, minmax(2.5rem, 1fr)) minmax(3.25rem, auto) minmax(3.25rem, auto)`;
+
+    let rowsHtml = '';
     idxs.forEach((ti, i) => {
-        const t = flexibleTournamentState.teams[ti];
-        const rsc = scores[i] != null ? scores[i] : 0;
-        const tot = t ? (totals[ti] || 0) : 0;
+        const t = teams[ti];
+        const rsc = scores[i] != null ? Math.round(scores[i]) : 0;
+        const tot = t ? Math.round(totals[ti] || 0) : 0;
         const name = t ? t.name : '—';
-        rows += `
-            <div class="ft-summary-row" role="row">
-                <div class="ft-summary-cell ft-summary-team">${escapeHtmlFlexible(name)}</div>
-                <div class="ft-summary-cell ft-summary-num">${rsc}</div>
-                <div class="ft-summary-cell ft-summary-num">${tot}</div>
-            </div>`;
+        let playerCells = '';
+        for (let j = 0; j < maxP; j++) {
+            const v = agg.get(`${ti}:${j}`);
+            const disp = v == null ? '—' : String(Math.round(v));
+            playerCells += `<div class="ft-summary-cell ft-summary-pcell ft-summary-num" role="cell">${escapeHtmlFlexible(disp)}</div>`;
+        }
+        rowsHtml += `<div class="ft-summary-row" role="row" style="grid-template-columns:${colTpl}"><div class="ft-summary-cell ft-summary-team" role="rowheader">${escapeHtmlFlexible(String(name))}</div>${playerCells}<div class="ft-summary-cell ft-summary-num ft-summary-round-total" role="cell">${rsc}</div><div class="ft-summary-cell ft-summary-num ft-summary-tourney-total" role="cell">${tot}</div></div>`;
     });
+
+    const headHtml = `<div class="ft-summary-head" role="row" style="grid-template-columns:${colTpl}"><span class="ft-summary-h ft-summary-h-team" role="columnheader">Команда</span>${columnHeaders.map((h) => `<span class="ft-summary-h ft-summary-h-player" role="columnheader">${escapeHtmlFlexible(h)}</span>`).join('')}<span class="ft-summary-h ft-summary-h-num" role="columnheader">Итого</span><span class="ft-summary-h ft-summary-h-num" role="columnheader">В турнире</span></div>`;
 
     const sumEl = document.getElementById('flexible-round-summary');
     if (sumEl) {
         sumEl.innerHTML = `
-            <div class="ft-summary-grid" role="table" aria-label="Итоги раунда">
-                <div class="ft-summary-head" role="row">
-                    <span class="ft-summary-h" role="columnheader">Команда</span>
-                    <span class="ft-summary-h" role="columnheader">Раунд</span>
-                    <span class="ft-summary-h" role="columnheader">Всего</span>
-                </div>
+            <div class="ft-summary-grid ft-summary-grid--by-players" role="table" aria-label="Итоги раунда">
+                ${headHtml}
                 <div class="ft-summary-body" role="rowgroup">
-                    ${rows}
+                    ${rowsHtml}
                 </div>
             </div>
-            <p class="hint ft-summary-footnote">Очки раунда суммированы в колонку «Всего» за турнир.</p>
+            <p class="hint ft-summary-footnote">В колонках игроков — очки за раунд по каждому слоту состава. «Итого» — сумма команды за раунд; «В турнире» — накопленно по турниру после этого раунда.</p>
         `;
     }
     showScreen('flexible-round-results');

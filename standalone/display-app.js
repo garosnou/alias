@@ -181,32 +181,113 @@
         var foot = document.getElementById('display-fr-footnote');
         if (grid) {
             grid.textContent = '';
-            var headRow = document.createElement('div');
-            headRow.className = 'display-fr-head';
-            ['Команда', 'Раунд', 'Всего'].forEach(function (label) {
-                var c = document.createElement('div');
-                c.className = 'display-fr-h';
-                c.textContent = label;
-                headRow.appendChild(c);
-            });
-            grid.appendChild(headRow);
-            (r.rows || []).forEach(function (row) {
-                var rowEl = document.createElement('div');
-                rowEl.className = 'display-fr-row';
-                var t1 = document.createElement('div');
-                t1.className = 'display-fr-cell display-fr-team';
-                t1.textContent = row.team || '';
-                var t2 = document.createElement('div');
-                t2.className = 'display-fr-cell display-fr-num';
-                t2.textContent = row.round != null && row.round !== '' ? String(row.round) : '';
-                var t3 = document.createElement('div');
-                t3.className = 'display-fr-cell display-fr-num display-fr-total';
-                t3.textContent = row.total != null && row.total !== '' ? String(row.total) : '';
-                rowEl.appendChild(t1);
-                rowEl.appendChild(t2);
-                rowEl.appendChild(t3);
-                grid.appendChild(rowEl);
-            });
+            var rows = r.rows || [];
+            var colH = r.columnHeaders || [];
+            var legacy =
+                rows.length &&
+                rows[0] &&
+                Object.prototype.hasOwnProperty.call(rows[0], 'round') &&
+                !rows[0].cells;
+
+            if (legacy) {
+                grid.className = 'display-fr-grid';
+                var headRow = document.createElement('div');
+                headRow.className = 'display-fr-head';
+                ['Команда', 'Раунд', 'Всего'].forEach(function (label) {
+                    var c = document.createElement('div');
+                    c.className = 'display-fr-h';
+                    c.textContent = label;
+                    headRow.appendChild(c);
+                });
+                grid.appendChild(headRow);
+                rows.forEach(function (row) {
+                    var rowEl = document.createElement('div');
+                    rowEl.className = 'display-fr-row';
+                    var t1 = document.createElement('div');
+                    t1.className = 'display-fr-cell display-fr-team';
+                    t1.textContent = row.team || '';
+                    var t2 = document.createElement('div');
+                    t2.className = 'display-fr-cell display-fr-num';
+                    t2.textContent = row.round != null && row.round !== '' ? String(row.round) : '';
+                    var t3 = document.createElement('div');
+                    t3.className = 'display-fr-cell display-fr-num display-fr-total';
+                    t3.textContent = row.total != null && row.total !== '' ? String(row.total) : '';
+                    rowEl.appendChild(t1);
+                    rowEl.appendChild(t2);
+                    rowEl.appendChild(t3);
+                    grid.appendChild(rowEl);
+                });
+            } else {
+                grid.className = 'display-fr-grid display-fr-grid--matrix';
+                var maxP = colH.length;
+                if (!maxP && rows[0] && rows[0].cells) {
+                    maxP = rows[0].cells.length;
+                }
+                if (!colH.length && maxP) {
+                    colH = [];
+                    for (var ji = 0; ji < maxP; ji++) {
+                        colH.push('Игрок ' + (ji + 1));
+                    }
+                }
+                var colTpl =
+                    maxP === 0
+                        ? 'minmax(6.5rem, 1.35fr) minmax(3.25rem, 0.75fr) minmax(3.25rem, 0.75fr)'
+                        : 'minmax(6.5rem, 1.2fr) repeat(' +
+                          maxP +
+                          ', minmax(2.75rem, 1fr)) minmax(3.5rem, 0.75fr) minmax(3.5rem, 0.75fr)';
+
+                var headRow2 = document.createElement('div');
+                headRow2.className = 'display-fr-head display-fr-matrix-row';
+                headRow2.style.gridTemplateColumns = colTpl;
+                var hTeam = document.createElement('div');
+                hTeam.className = 'display-fr-h display-fr-h-team';
+                hTeam.textContent = 'Команда';
+                headRow2.appendChild(hTeam);
+                colH.forEach(function (label) {
+                    var hc = document.createElement('div');
+                    hc.className = 'display-fr-h display-fr-h-player';
+                    hc.textContent = label;
+                    headRow2.appendChild(hc);
+                });
+                ['Итого', 'В турнире'].forEach(function (lbl) {
+                    var hn = document.createElement('div');
+                    hn.className = 'display-fr-h display-fr-h-num';
+                    hn.textContent = lbl;
+                    headRow2.appendChild(hn);
+                });
+                grid.appendChild(headRow2);
+
+                rows.forEach(function (row) {
+                    var rowEl = document.createElement('div');
+                    rowEl.className = 'display-fr-row display-fr-matrix-row';
+                    rowEl.style.gridTemplateColumns = colTpl;
+                    var t0 = document.createElement('div');
+                    t0.className = 'display-fr-cell display-fr-team';
+                    t0.textContent = row.team || '';
+                    rowEl.appendChild(t0);
+                    var cells = row.cells || [];
+                    for (var ci = 0; ci < maxP; ci++) {
+                        var td = document.createElement('div');
+                        td.className = 'display-fr-cell display-fr-num display-fr-pcell';
+                        var v = cells[ci];
+                        td.textContent = v != null && v !== '' ? String(v) : '';
+                        rowEl.appendChild(td);
+                    }
+                    var tr = document.createElement('div');
+                    tr.className = 'display-fr-cell display-fr-num display-fr-round-total';
+                    tr.textContent =
+                        row.roundTotal != null && row.roundTotal !== '' ? String(row.roundTotal) : '';
+                    rowEl.appendChild(tr);
+                    var tt = document.createElement('div');
+                    tt.className = 'display-fr-cell display-fr-num display-fr-tourney-total';
+                    tt.textContent =
+                        row.tournamentTotal != null && row.tournamentTotal !== ''
+                            ? String(row.tournamentTotal)
+                            : '';
+                    rowEl.appendChild(tt);
+                    grid.appendChild(rowEl);
+                });
+            }
         }
         if (foot) {
             foot.textContent = r.footnote || '';
@@ -328,6 +409,7 @@
 
         if (phase === 'prep') {
             if (hallDock) {
+                hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
                 hallDock.textContent = '';
             }
@@ -353,6 +435,7 @@
 
         if (showTournament) {
             if (hallDock) {
+                hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
                 hallDock.textContent = '';
             }
@@ -363,8 +446,16 @@
 
         if (phase === 'paused' || screenId === 'pause-screen') {
             if (hallDock) {
+                hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
                 hallDock.textContent = '';
+            }
+            var pausedTextEl = document.getElementById('display-paused-text');
+            if (pausedTextEl) {
+                pausedTextEl.textContent =
+                    state.awaitingCustomWordPack
+                        ? 'Пауза · на экране ведущего загрузите новый пакет слов'
+                        : 'Пауза';
             }
             pausedEl.classList.remove('hidden');
             return;
@@ -419,34 +510,89 @@
                 }
             }
             if (phase === 'lobby') {
+                metaEl.className = 'display-meta';
                 metaEl.textContent = 'Ожидание начала раунда';
             } else {
-                metaEl.textContent =
-                    'Слово ' +
-                    (state.wordNumber || 0) +
-                    ' · Очки ' +
-                    (state.score != null ? state.score : 0) +
-                    (state.skipsRemaining != null && state.maxSkipsAllowed != null
-                        ? ' · Пропуски ' + state.skipsRemaining + '/' + state.maxSkipsAllowed
-                        : '');
+                var hsbPlay = state.hallScoreboard;
+                var flexHall = hsbPlay && hsbPlay.mode === 'flexible';
+                var scVal = state.score != null ? state.score : 0;
+                var scStr = String(Math.round(scVal));
+                var skipInner = '';
+                if (state.skipsRemaining != null && state.maxSkipsAllowed != null) {
+                    var rem = state.skipsRemaining;
+                    var maxSk = state.maxSkipsAllowed;
+                    var usedSk = Math.max(0, maxSk - rem);
+                    var skipsDepleted = maxSk > 0 && rem <= 0;
+                    skipInner =
+                        '<div class="display-meta-chip display-meta-chip--skips' +
+                        (skipsDepleted ? ' display-meta-chip--skips-depleted' : '') +
+                        '" role="status">' +
+                        '<span class="display-meta-chip-lbl">Пропуски</span>' +
+                        '<span class="display-meta-chip-val">' +
+                        String(usedSk) +
+                        '<span class="display-meta-chip-max">/' +
+                        String(maxSk) +
+                        '</span></span></div>';
+                }
+                var scoreChip =
+                    '<div class="display-meta-chip display-meta-chip--score" role="status">' +
+                    '<span class="display-meta-chip-lbl">Очки</span>' +
+                    '<span class="display-meta-chip-val">' +
+                    scStr +
+                    '</span></div>';
+                if (flexHall) {
+                    metaEl.className = 'display-meta display-meta--hud';
+                    metaEl.innerHTML =
+                        '<div class="display-meta-bar">' + scoreChip + skipInner + '</div>';
+                } else {
+                    var wn = state.wordNumber || 0;
+                    var wordChip =
+                        '<div class="display-meta-chip display-meta-chip--word">' +
+                        '<span class="display-meta-chip-lbl">Слово</span>' +
+                        '<span class="display-meta-chip-val">' +
+                        String(wn) +
+                        '</span></div>';
+                    metaEl.className = 'display-meta display-meta--hud';
+                    metaEl.innerHTML =
+                        '<div class="display-meta-bar">' + wordChip + scoreChip + skipInner + '</div>';
+                }
             }
             if (hallDock) {
                 var hsb = state.hallScoreboard;
                 if (hsb && hsb.rows && hsb.rows.length) {
                     hallDock.classList.remove('hidden');
                     hallDock.textContent = '';
+                    if (hsb.mode === 'flexible') {
+                        hallDock.classList.add('display-hall-scoreboard--flex-cards');
+                    } else {
+                        hallDock.classList.remove('display-hall-scoreboard--flex-cards');
+                    }
                     hsb.rows.forEach(function (row, idx) {
-                        var pill = document.createElement('span');
-                        pill.className = 'display-hall-pill';
-                        var nm = document.createElement('span');
-                        nm.className = 'display-hall-pill-name';
-                        nm.textContent = row.name || '';
-                        var sc = document.createElement('strong');
-                        sc.className = 'display-hall-pill-score';
-                        sc.textContent = row.score != null ? String(row.score) : '0';
-                        pill.appendChild(nm);
-                        pill.appendChild(document.createTextNode(' '));
-                        pill.appendChild(sc);
+                        var pill;
+                        if (hsb.mode === 'flexible') {
+                            pill = document.createElement('div');
+                            pill.className = 'display-hall-ft-card';
+                            var nm = document.createElement('span');
+                            nm.className = 'display-hall-ft-card-name';
+                            nm.textContent = row.name || '';
+                            var sc = document.createElement('strong');
+                            sc.className = 'display-hall-ft-card-score';
+                            sc.textContent = row.score != null ? String(row.score) : '0';
+                            pill.appendChild(nm);
+                            pill.appendChild(sc);
+                        } else {
+                            pill = document.createElement('span');
+                            pill.className = 'display-hall-pill';
+                            var nm = document.createElement('span');
+                            nm.className = 'display-hall-pill-name';
+                            nm.textContent = row.name || '';
+                            var sc = document.createElement('strong');
+                            sc.className = 'display-hall-pill-score';
+                            sc.textContent = row.score != null ? String(row.score) : '0';
+                            pill.appendChild(nm);
+                            pill.appendChild(document.createTextNode(' '));
+                            pill.appendChild(sc);
+                        }
                         hallDock.appendChild(pill);
                         if (hsb.mode === 'tournament' && idx === 0 && hsb.rows.length > 1) {
                             var vs = document.createElement('span');
@@ -456,6 +602,7 @@
                         }
                     });
                 } else {
+                    hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                     hallDock.classList.add('hidden');
                     hallDock.textContent = '';
                 }
@@ -465,6 +612,7 @@
 
         if (phase === 'results' && state.results && resultsEl) {
             if (hallDock) {
+                hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
                 hallDock.textContent = '';
             }
@@ -506,6 +654,7 @@
         }
 
         if (hallDock) {
+            hallDock.classList.remove('display-hall-scoreboard--flex-cards');
             hallDock.classList.add('hidden');
             hallDock.textContent = '';
         }

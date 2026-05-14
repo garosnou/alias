@@ -242,6 +242,13 @@ body.standalone-host .container {
 }
 
 /* Игровой экран */
+#game-screen.active > .container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .game-header {
     display: flex;
     justify-content: space-between;
@@ -300,6 +307,57 @@ body.standalone-host .container {
 .stat-value {
     font-weight: 600;
     font-size: 1.1rem;
+}
+
+/* Гибкий турнир на игровом экране: крупнее очки и оставшиеся пропуски */
+#game-screen .host-game-stats--prominent {
+    gap: 0.6rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+#game-screen .host-game-stats--prominent .stat-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    opacity: 0.92;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+#game-screen .host-game-stats--prominent #current-score {
+    font-size: 1.85rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #86efac;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+
+#game-screen .host-game-stats--prominent #host-skip-limit-val {
+    font-size: 1.7rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #fef08a;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+
+#host-skip-limit-wrap.host-skip-depleted {
+    border-radius: 10px;
+    padding: 0.2rem 0.45rem;
+    margin: -0.2rem -0.45rem;
+    background: rgba(127, 29, 29, 0.35);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+#host-skip-limit-wrap.host-skip-depleted .stat-label {
+    color: #fecaca;
+}
+
+#host-skip-limit-wrap.host-skip-depleted .stat-value,
+#game-screen .host-game-stats--prominent #host-skip-limit-wrap.host-skip-depleted #host-skip-limit-val {
+    color: #fca5a5;
+    text-shadow: 0 0 14px rgba(220, 38, 38, 0.4);
 }
 
 /* Отображение слова */
@@ -673,6 +731,37 @@ h2 {
     font-size: 0.9rem;
 }
 
+#flexible-tournament-setup .flexible-teams-list-below {
+    margin-top: 1.5rem;
+}
+
+#flexible-tournament-setup .team-item--editing {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+
+#flexible-tournament-setup .team-item--editing .team-edit-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+#flexible-tournament-setup .team-edit-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+#flexible-tournament-setup .team-item-actions-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    align-items: center;
+}
+
 .flexible-round-picks {
     display: flex;
     flex-direction: column;
@@ -753,52 +842,65 @@ h2 {
 
 #flexible-round-summary .ft-summary-grid {
     width: 100%;
-    max-width: 520px;
+    max-width: min(960px, 100%);
     margin: 0 auto 1rem;
     color: #fff;
     text-align: left;
 }
 
-#flexible-round-summary .ft-summary-head,
-#flexible-round-summary .ft-summary-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 0.75rem 1.25rem;
-    align-items: center;
-    padding: 0.55rem 0;
+#flexible-round-summary .ft-summary-grid--by-players {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
 }
 
-#flexible-round-summary .ft-summary-head {
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-head,
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-row {
+    display: grid;
+    gap: 0.45rem 0.65rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    min-width: min-content;
+}
+
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-head {
     border-bottom: 2px solid rgba(253, 224, 71, 0.45);
-    margin-bottom: 0.35rem;
-    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.72rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.88);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
 }
 
-#flexible-round-summary .ft-summary-head .ft-summary-h:nth-child(1) {
+#flexible-round-summary .ft-summary-h-team {
     justify-self: start;
     text-align: left;
 }
 
-#flexible-round-summary .ft-summary-head .ft-summary-h:nth-child(2),
-#flexible-round-summary .ft-summary-head .ft-summary-h:nth-child(3) {
+#flexible-round-summary .ft-summary-h-player {
+    justify-self: center;
+    text-align: center;
+    line-height: 1.2;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+    font-size: 0.78rem;
+    hyphens: auto;
+    overflow-wrap: anywhere;
+}
+
+#flexible-round-summary .ft-summary-h-num {
     justify-self: end;
     text-align: right;
 }
 
-#flexible-round-summary .ft-summary-row .ft-summary-num {
-    justify-self: end;
-}
-
-#flexible-round-summary .ft-summary-body .ft-summary-row {
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-body .ft-summary-row {
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 1.05rem;
+    font-size: 0.98rem;
 }
 
-#flexible-round-summary .ft-summary-body .ft-summary-row:last-child {
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-body .ft-summary-row:last-child {
     border-bottom: none;
 }
 
@@ -808,12 +910,25 @@ h2 {
     word-break: break-word;
 }
 
+#flexible-round-summary .ft-summary-pcell {
+    justify-self: center;
+    text-align: center;
+    font-weight: 700;
+    color: #e0e7ff;
+    min-width: 2.25rem;
+}
+
 #flexible-round-summary .ft-summary-num {
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: #86efac;
     text-align: right;
-    min-width: 3.5rem;
+    min-width: 3rem;
+}
+
+#flexible-round-summary .ft-summary-round-total,
+#flexible-round-summary .ft-summary-tourney-total {
+    justify-self: end;
 }
 
 #flexible-round-summary .ft-summary-footnote {
@@ -1519,4 +1634,116 @@ body.standalone-host .flexible-num-input {
 .host-sb-vs {
     opacity: 0.65;
     font-weight: 700;
+}
+
+/* Гибкий турнир: карточки счёта на игровом экране (как на экране раунда) */
+.host-playing-scoreboard.host-ft-playing-board {
+    margin-top: auto;
+    width: 100%;
+}
+
+.host-ft-playing-inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 1rem;
+    align-items: stretch;
+}
+
+.host-ft-score-card {
+    min-width: 5.5rem;
+    min-height: 5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.host-ft-score-card.host-ft-card--active {
+    border-color: rgba(253, 224, 71, 0.55);
+    box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.2);
+}
+
+.host-ft-card-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.25;
+    word-break: break-word;
+    max-width: 10rem;
+}
+
+.host-ft-card-num {
+    font-size: 1.45rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #86efac;
+    margin: 0;
+}
+
+/* Окно дозагрузки пакета при исчерпании пользовательских слов */
+.custom-pack-depleted-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: rgba(15, 23, 42, 0.78);
+    backdrop-filter: blur(8px);
+}
+
+.custom-pack-depleted-overlay.hidden {
+    display: none !important;
+}
+
+.custom-pack-depleted-dialog {
+    width: min(100%, 440px);
+    padding: 1.5rem 1.65rem;
+    border-radius: 16px;
+    background: linear-gradient(155deg, rgba(30, 27, 75, 0.98) 0%, rgba(49, 46, 129, 0.96) 100%);
+    border: 1px solid rgba(165, 180, 252, 0.35);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+    text-align: left;
+    color: #fff;
+}
+
+.custom-pack-depleted-dialog h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1.35rem;
+    color: #fef9c3;
+}
+
+.custom-pack-depleted-lead {
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    opacity: 0.95;
+}
+
+.custom-pack-depleted-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.custom-pack-depleted-file {
+    flex: 1 1 12rem;
+    min-width: 0;
+    font-size: 0.85rem;
+}
+
+.custom-pack-depleted-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
 }
