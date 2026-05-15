@@ -173,10 +173,20 @@
         });
     }
 
+    function buildDisplayFrColTpl(maxP) {
+        if (maxP === 0) return 'minmax(9rem, 1.35fr) minmax(4rem, auto)';
+        return (
+            'minmax(9rem, 1.3fr) repeat(' +
+            maxP +
+            ', minmax(3.25rem, 1fr)) minmax(4rem, auto)'
+        );
+    }
+
     function renderFlexibleRoundResults(r) {
         var root = document.getElementById('display-results-flexible-round');
         if (!root) return;
         root.classList.remove('hidden');
+        var resultsEl = document.getElementById('display-results');
         var grid = document.getElementById('display-fr-grid');
         var foot = document.getElementById('display-fr-footnote');
         if (grid) {
@@ -218,7 +228,7 @@
                     grid.appendChild(rowEl);
                 });
             } else {
-                grid.className = 'display-fr-grid display-fr-grid--matrix';
+                grid.className = 'display-fr-grid display-fr-grid--matrix display-fr-table';
                 var maxP = colH.length;
                 if (!maxP && rows[0] && rows[0].cells) {
                     maxP = rows[0].cells.length;
@@ -229,16 +239,15 @@
                         colH.push('Игрок ' + (ji + 1));
                     }
                 }
-                var colTpl =
-                    maxP === 0
-                        ? 'minmax(6.5rem, 1.35fr) minmax(3.25rem, 0.75fr) minmax(3.25rem, 0.75fr)'
-                        : 'minmax(6.5rem, 1.2fr) repeat(' +
-                          maxP +
-                          ', minmax(2.75rem, 1fr)) minmax(3.5rem, 0.75fr) minmax(3.5rem, 0.75fr)';
+                var colTpl = buildDisplayFrColTpl(maxP);
+                var rowCount = rows.length;
+                grid.style.setProperty('--display-fr-cols', colTpl);
+                grid.style.setProperty('--display-fr-rows', String(rowCount));
+                grid.dataset.rows = String(rowCount);
+                grid.dataset.playerCols = String(maxP);
 
                 var headRow2 = document.createElement('div');
                 headRow2.className = 'display-fr-head display-fr-matrix-row';
-                headRow2.style.gridTemplateColumns = colTpl;
                 var hTeam = document.createElement('div');
                 hTeam.className = 'display-fr-h display-fr-h-team';
                 hTeam.textContent = 'Команда';
@@ -247,51 +256,53 @@
                     var hc = document.createElement('div');
                     hc.className = 'display-fr-h display-fr-h-player';
                     hc.textContent = label;
+                    hc.title = label;
                     headRow2.appendChild(hc);
                 });
-                ['Итого', 'В турнире'].forEach(function (lbl) {
-                    var hn = document.createElement('div');
-                    hn.className = 'display-fr-h display-fr-h-num';
-                    hn.textContent = lbl;
-                    headRow2.appendChild(hn);
-                });
+                var hnTotal = document.createElement('div');
+                hnTotal.className = 'display-fr-h display-fr-h-num';
+                hnTotal.textContent = 'Итого';
+                headRow2.appendChild(hnTotal);
                 grid.appendChild(headRow2);
+
+                var bodyWrap = document.createElement('div');
+                bodyWrap.className = 'display-fr-body';
+                bodyWrap.setAttribute('role', 'rowgroup');
+                grid.appendChild(bodyWrap);
 
                 rows.forEach(function (row) {
                     var rowEl = document.createElement('div');
                     rowEl.className = 'display-fr-row display-fr-matrix-row';
-                    rowEl.style.gridTemplateColumns = colTpl;
                     var t0 = document.createElement('div');
                     t0.className = 'display-fr-cell display-fr-team';
-                    t0.textContent = row.team || '';
+                    var teamName = row.team || '';
+                    t0.textContent = teamName;
+                    t0.title = teamName;
                     rowEl.appendChild(t0);
                     var cells = row.cells || [];
                     for (var ci = 0; ci < maxP; ci++) {
                         var td = document.createElement('div');
                         td.className = 'display-fr-cell display-fr-num display-fr-pcell';
                         var v = cells[ci];
-                        td.textContent = v != null && v !== '' ? String(v) : '';
+                        td.textContent = v != null && v !== '' ? String(v) : '—';
                         rowEl.appendChild(td);
                     }
                     var tr = document.createElement('div');
                     tr.className = 'display-fr-cell display-fr-num display-fr-round-total';
                     tr.textContent =
-                        row.roundTotal != null && row.roundTotal !== '' ? String(row.roundTotal) : '';
+                        row.roundTotal != null && row.roundTotal !== ''
+                            ? String(row.roundTotal)
+                            : row.total != null && row.total !== ''
+                              ? String(row.total)
+                              : '';
                     rowEl.appendChild(tr);
-                    var tt = document.createElement('div');
-                    tt.className = 'display-fr-cell display-fr-num display-fr-tourney-total';
-                    tt.textContent =
-                        row.tournamentTotal != null && row.tournamentTotal !== ''
-                            ? String(row.tournamentTotal)
-                            : '';
-                    rowEl.appendChild(tt);
-                    grid.appendChild(rowEl);
+                    bodyWrap.appendChild(rowEl);
                 });
             }
         }
         if (foot) {
-            foot.textContent = r.footnote || '';
-            foot.classList.toggle('hidden', !r.footnote);
+            foot.textContent = '';
+            foot.classList.add('hidden');
         }
     }
 
@@ -618,6 +629,7 @@
             }
             resultsEl.classList.remove('hidden');
             var r = state.results;
+            resultsEl.classList.toggle('display-results--flexible-round', r.variant === 'flexible-round');
             resultsTitle.textContent = r.title || 'Результаты';
 
             var drmEl = document.getElementById('display-results-match');

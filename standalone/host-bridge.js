@@ -86,14 +86,12 @@
                 var teamEl = row.querySelector('.ft-summary-team');
                 var pcells = row.querySelectorAll('.ft-summary-pcell');
                 var rt = row.querySelector('.ft-summary-round-total');
-                var tt = row.querySelector('.ft-summary-tourney-total');
                 rows.push({
                     team: teamEl ? safeText(teamEl) : '',
                     cells: Array.from(pcells).map(function (c) {
                         return safeText(c);
                     }),
-                    roundTotal: rt ? safeText(rt) : '',
-                    tournamentTotal: tt ? safeText(tt) : ''
+                    roundTotal: rt ? safeText(rt) : ''
                 });
             });
             var foot = root.querySelector('.ft-summary-footnote');
@@ -198,13 +196,19 @@
         var root = document.getElementById('ft-match-info');
         if (!root) return [];
         var out = [];
-        root.querySelectorAll('.ft-score-pill').forEach(function (pill) {
+        var cards = root.querySelectorAll('.host-ft-score-card, .ft-score-pill');
+        cards.forEach(function (pill) {
             var strong = pill.querySelector('strong');
             var score = strong ? safeText(strong) : '0';
-            var clone = pill.cloneNode(true);
-            var st = clone.querySelector('strong');
-            if (st) st.remove();
-            var name = safeText(clone);
+            var nameEl = pill.querySelector('.host-ft-card-name');
+            var name = nameEl
+                ? safeText(nameEl)
+                : (function () {
+                      var clone = pill.cloneNode(true);
+                      var st = clone.querySelector('strong');
+                      if (st) st.remove();
+                      return safeText(clone);
+                  })();
             if (name) out.push({ name: name, score: score });
         });
         return out;

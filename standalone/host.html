@@ -279,10 +279,12 @@
 
     <!-- Гибкий турнир: команды и раунды по ходу -->
     <div id="flexible-tournament-setup" class="screen">
-        <div class="container">
+        <div class="container flexible-setup-shell">
             <h2>Гибкий турнир</h2>
-            <p class="hint">Создайте команды заранее или добавляйте по ходу. Состав и очки сохраняются в браузере до сброса. В каждом раунде выберите до <strong>16</strong> команд и нажмите «Вызвать команды» — зал увидит состав. Число <strong>кругов</strong> по умолчанию равно числу игроков у самой большой из выбранных команд (можно задать вручную ниже). У команды меньше игроков — те же игроки снова по кругу.</p>
+            <p class="hint flexible-setup-lead">Создайте команды заранее или добавляйте по ходу. Состав и очки сохраняются в браузере до сброса. В списке команд отметьте <strong>«Играет»</strong> у участников следующего раунда (до <strong>16</strong>) и нажмите «Вызвать команды» — зал увидит состав. Число <strong>кругов</strong> по умолчанию равно числу игроков у самой большой из выбранных команд (можно задать вручную ниже). У команды меньше игроков — те же игроки снова по кругу.</p>
 
+            <div class="flexible-setup-columns">
+            <div class="flexible-setup-col flexible-setup-col--settings">
             <div class="tournament-settings">
                 <div class="settings-group">
                     <label for="flexible-tournament-time">Время раунда (игры):</label>
@@ -315,8 +317,17 @@
                 </div>
             </div>
 
+            <div class="tournament-buttons flexible-setup-actions flexible-setup-actions--stacked">
+                <button type="button" class="btn btn-primary" onclick="callFlexibleTeams()">Вызвать команды</button>
+                <button type="button" class="btn btn-danger" onclick="resetFlexibleTournamentPersisted()">Сброс турнира</button>
+                <button type="button" class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
+            </div>
+            </div>
+
+            <div class="flexible-setup-col flexible-setup-col--teams">
             <div class="teams-section">
                 <h3>Команды</h3>
+                <p class="hint teams-section-hint">Кнопка «Играет» / «Не играет» — участие в следующем раунде.</p>
                 <div class="add-team-form">
                     <h4>Добавить команду</h4>
                     <div class="form-group">
@@ -332,16 +343,7 @@
                 </div>
                 <div id="flexible-teams-list" class="flexible-teams-list-below"></div>
             </div>
-
-            <div class="settings-group">
-                <h3>Кто играет в следующем раунде (1–16 команд)</h3>
-                <div id="flexible-round-picks" class="flexible-round-picks"></div>
             </div>
-
-            <div class="tournament-buttons">
-                <button type="button" class="btn btn-primary" onclick="callFlexibleTeams()">Вызвать команды</button>
-                <button type="button" class="btn btn-danger" onclick="resetFlexibleTournamentPersisted()">Сброс турнира</button>
-                <button type="button" class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
             </div>
         </div>
     </div>
@@ -371,9 +373,9 @@
         </div>
     </div>
 
-    <div id="flexible-round-results" class="screen">
-        <div class="container">
-            <h2>Итоги раунда</h2>
+    <div id="flexible-round-results" class="screen screen--flexible-round-results">
+        <div class="container flexible-round-results-shell">
+            <h2 class="flexible-round-results-title">Итоги раунда</h2>
             <div id="flexible-round-summary"></div>
             <div class="tournament-buttons">
                 <button type="button" class="btn btn-primary" onclick="flexibleAfterRoundToSetup()">Новый раунд</button>

@@ -762,27 +762,39 @@ h2 {
     align-items: center;
 }
 
-.flexible-round-picks {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+#flexible-tournament-setup .teams-section-hint {
+    margin: -0.5rem 0 1rem;
+    font-size: 0.9rem;
 }
 
-.ft-pick-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: rgba(255,255,255,0.08);
-    border-radius: 10px;
-    padding: 0.65rem 1rem;
-    border: 1px solid rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.95);
+#flexible-tournament-setup .ft-play-toggle {
+    min-width: 7.5rem;
+    font-weight: 700;
+    border: none;
+    color: #fff;
 }
 
-.ft-pick-row input {
-    width: 1.15rem;
-    height: 1.15rem;
-    flex-shrink: 0;
+#flexible-tournament-setup .ft-play-toggle--off {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+}
+
+#flexible-tournament-setup .ft-play-toggle--off:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+#flexible-tournament-setup .ft-play-toggle--on {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+}
+
+#flexible-tournament-setup .ft-play-toggle--on:hover {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+#flexible-tournament-setup .team-item--playing {
+    border-color: rgba(134, 239, 172, 0.45);
+    background: rgba(22, 163, 74, 0.12);
 }
 
 .ft-call-teams {
@@ -840,74 +852,127 @@ h2 {
     margin-top: 0.35rem;
 }
 
+/* Итоги раунда — таблица как на экране зала */
 #flexible-round-summary .ft-summary-grid {
     width: 100%;
-    max-width: min(960px, 100%);
-    margin: 0 auto 1rem;
+    max-width: none;
+    margin: 0;
     color: #fff;
     text-align: left;
 }
 
 #flexible-round-summary .ft-summary-grid--by-players {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 0.25rem;
+    display: grid;
+    grid-template-columns: var(--ft-grid-cols);
+    grid-template-rows: auto repeat(var(--ft-rows, 8), minmax(1.35rem, min(2.35rem, 1fr)));
+    column-gap: clamp(0.5rem, 1.2vw, 1.1rem);
+    row-gap: 0;
+    width: 100%;
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    padding: 0;
+    overflow: hidden;
+    align-content: stretch;
+    box-sizing: border-box;
+}
+
+#flexible-round-summary .ft-summary-body {
+    display: contents;
 }
 
 #flexible-round-summary .ft-summary-grid--by-players .ft-summary-head,
 #flexible-round-summary .ft-summary-grid--by-players .ft-summary-row {
     display: grid;
-    gap: 0.45rem 0.65rem;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: center;
-    padding: 0.5rem 0;
-    min-width: min-content;
+    gap: 0;
+    min-width: 0;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 #flexible-round-summary .ft-summary-grid--by-players .ft-summary-head {
+    background: transparent;
+    padding: clamp(10px, 1.4vh, 14px) 0 clamp(0.28rem, 0.55vh, 0.5rem);
+    margin-bottom: 0;
+    min-height: auto;
     border-bottom: 2px solid rgba(253, 224, 71, 0.45);
-    margin-bottom: 0.25rem;
-    font-size: 0.72rem;
+    font-size: clamp(0.72rem, 1.28vh, 0.98rem);
     font-weight: 700;
     color: rgba(255, 255, 255, 0.88);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
+}
+
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-row:not(.ft-summary-head):nth-child(even) {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-row:not(.ft-summary-head):nth-child(odd) {
+    background: rgba(0, 0, 0, 0.14);
 }
 
 #flexible-round-summary .ft-summary-h-team {
     justify-self: start;
     text-align: left;
+    padding-left: clamp(14px, 2.2vw, 24px);
+    box-sizing: border-box;
 }
 
 #flexible-round-summary .ft-summary-h-player {
     justify-self: center;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.15;
     text-transform: none;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
     font-weight: 700;
-    font-size: 0.78rem;
-    hyphens: auto;
-    overflow-wrap: anywhere;
+    font-size: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 #flexible-round-summary .ft-summary-h-num {
     justify-self: end;
     text-align: right;
+    padding-right: clamp(14px, 2.2vw, 24px);
+    box-sizing: border-box;
 }
 
-#flexible-round-summary .ft-summary-grid--by-players .ft-summary-body .ft-summary-row {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 0.98rem;
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-row:not(.ft-summary-head) {
+    min-height: 0;
+    padding: clamp(0.04rem, 0.12vh, 0.08rem) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: clamp(1.02rem, 1.92vh, 1.42rem);
+    line-height: 1.08;
 }
 
-#flexible-round-summary .ft-summary-grid--by-players .ft-summary-body .ft-summary-row:last-child {
+#flexible-round-summary .ft-summary-grid--by-players .ft-summary-row:not(.ft-summary-head):last-child {
     border-bottom: none;
+}
+
+#flexible-round-summary .ft-summary-grid--by-players[data-rows="13"] .ft-summary-row:not(.ft-summary-head),
+#flexible-round-summary .ft-summary-grid--by-players[data-rows="14"] .ft-summary-row:not(.ft-summary-head),
+#flexible-round-summary .ft-summary-grid--by-players[data-rows="15"] .ft-summary-row:not(.ft-summary-head),
+#flexible-round-summary .ft-summary-grid--by-players[data-rows="16"] .ft-summary-row:not(.ft-summary-head) {
+    font-size: clamp(0.98rem, 1.78vh, 1.32rem);
 }
 
 #flexible-round-summary .ft-summary-team {
     font-weight: 600;
     color: #fef9c3;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    justify-self: start;
+    text-align: left;
+    padding-left: clamp(14px, 2.2vw, 24px);
+    box-sizing: border-box;
 }
 
 #flexible-round-summary .ft-summary-pcell {
@@ -915,25 +980,31 @@ h2 {
     text-align: center;
     font-weight: 700;
     color: #e0e7ff;
-    min-width: 2.25rem;
+    font-variant-numeric: tabular-nums;
 }
 
 #flexible-round-summary .ft-summary-num {
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: #86efac;
-    text-align: right;
-    min-width: 3rem;
 }
 
-#flexible-round-summary .ft-summary-round-total,
-#flexible-round-summary .ft-summary-tourney-total {
+#flexible-round-summary .ft-summary-round-total {
     justify-self: end;
+    text-align: right;
+    padding-right: clamp(14px, 2.2vw, 24px);
+    box-sizing: border-box;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 #flexible-round-summary .ft-summary-footnote {
-    margin-top: 1rem;
+    flex-shrink: 0;
+    margin: 0;
+    padding: clamp(8px, 1.2vh, 12px) clamp(14px, 2vw, 20px);
+    font-size: clamp(0.72rem, 1.2vh, 0.88rem);
+    line-height: 1.3;
     text-align: center;
+    opacity: 0.85;
 }
 
 .btn-small {
@@ -1422,21 +1493,76 @@ body.standalone-host .tournament-settings > .settings-group:last-child {
     margin-bottom: 0;
 }
 
-/* Гибкий турнир: блок выбора команд в раунде (секция под списком команд) */
-#flexible-tournament-setup .teams-section + .settings-group {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    margin-bottom: 1.5rem;
+/* Гибкий турнир: двухколоночная настройка на широком экране */
+#flexible-tournament-setup .flexible-setup-shell {
+    max-width: min(1400px, 98vw);
     text-align: left;
 }
 
-#flexible-tournament-setup .teams-section + .settings-group > h3 {
-    color: #fff;
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-    font-weight: 700;
+#flexible-tournament-setup .flexible-setup-lead {
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+#flexible-tournament-setup .flexible-setup-columns {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: stretch;
+    margin-bottom: 1.25rem;
+}
+
+#flexible-tournament-setup .flexible-setup-col {
+    min-width: 0;
+}
+
+#flexible-tournament-setup .flexible-setup-col--settings .tournament-settings {
+    margin-bottom: 0;
+}
+
+#flexible-tournament-setup .flexible-setup-col--teams .teams-section {
+    margin-bottom: 0;
+}
+
+#flexible-tournament-setup .flexible-setup-col--teams .teams-section h3 {
+    margin-top: 0;
+}
+
+#flexible-tournament-setup .flexible-setup-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+#flexible-tournament-setup .flexible-setup-actions--stacked {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0;
+}
+
+#flexible-tournament-setup .flexible-setup-actions--stacked .btn {
+    width: 100%;
+    margin: 0;
+}
+
+@media (min-width: 960px) {
+    #flexible-tournament-setup .flexible-setup-columns {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 1.5rem;
+    }
+
+    #flexible-tournament-setup .flexible-setup-col--settings {
+        flex: 0 1 26rem;
+        max-width: 32rem;
+    }
+
+    #flexible-tournament-setup .flexible-setup-col--teams {
+        flex: 1 1 22rem;
+    }
 }
 
 /* Экраны матча / гибкий раунд: блоки сведений от JS */
@@ -1478,7 +1604,21 @@ body.standalone-host .tournament-settings > .settings-group:last-child {
 }
 
 #ft-match-info .ft-score-strip {
-    margin-top: 1rem;
+    margin: 0.65rem 0 0.85rem;
+    overflow: visible;
+}
+
+#ft-match-info.ft-match-info--many-teams {
+    padding: 1rem 1.1rem;
+}
+
+#ft-match-info.ft-match-info--many-teams p {
+    font-size: 0.88rem;
+    margin: 0.25rem 0;
+}
+
+#ft-match-info .ft-score-strip.host-ft-playing-inner {
+    width: 100%;
 }
 
 .competitive-scoreboard h3 {
@@ -1554,12 +1694,55 @@ body.standalone-host .player-words-breakdown .player-header {
     font-size: 0.95rem;
 }
 
+#flexible-round-results.screen--flexible-round-results.active {
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+    max-height: calc(100dvh - 48px);
+}
+
+#flexible-round-results .flexible-round-results-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    height: calc(100dvh - 48px);
+    max-height: calc(100dvh - 48px);
+    margin: 0;
+    padding: clamp(0.35rem, 1vh, 0.75rem) 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#flexible-round-results .flexible-round-results-title {
+    flex-shrink: 0;
+    margin: 0 0 clamp(0.35rem, 0.8vh, 0.65rem);
+    padding: 0 clamp(12px, 2vw, 20px);
+    font-size: clamp(1.35rem, 3.2vh, 2rem);
+    text-align: center;
+}
+
+#flexible-round-results #flexible-round-summary {
+    flex: 1 1 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#flexible-round-results .tournament-buttons {
+    flex-shrink: 0;
+    margin-top: 0.5rem;
+    padding: 0 clamp(12px, 2vw, 20px);
+}
+
 #flexible-round-summary {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    margin: 1rem 0 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(0, 0, 0, 0.18);
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
 }
 
 body.standalone-host .radio-group {
@@ -1685,6 +1868,134 @@ body.standalone-host .flexible-num-input {
     font-variant-numeric: tabular-nums;
     color: #86efac;
     margin: 0;
+}
+
+/* Много команд: сетка (размеры — в модификаторах --game / --match) */
+.host-ft-playing-inner.host-ft-teams-dense {
+    display: grid;
+    gap: 0.5rem 0.6rem;
+    justify-content: stretch;
+    align-items: stretch;
+}
+
+.host-ft-teams-dense .host-ft-score-card {
+    min-width: 0;
+}
+
+.host-ft-teams-dense .host-ft-card-name {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
+}
+
+/* Игровой экран: поле слова умеренное, табло снизу читаемое */
+body.standalone-host #game-screen.active {
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+}
+
+body.standalone-host #game-screen.active > .container {
+    max-width: min(920px, 96vw);
+    width: 100%;
+}
+
+body.standalone-host #game-screen.active .word-display {
+    flex: 0 0 auto;
+    min-height: 7.5rem;
+    max-height: min(26vh, 220px);
+    margin: 1.25rem 0;
+    padding: 1.25rem 1.5rem;
+}
+
+body.standalone-host #game-screen.active .word {
+    font-size: clamp(2rem, 4.5vh, 2.85rem);
+}
+
+body.standalone-host #game-screen.active .host-playing-scoreboard.host-ft-playing-board {
+    flex-shrink: 0;
+    margin-top: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    max-height: min(42vh, 420px);
+    overflow-y: auto;
+}
+
+#game-screen .host-ft-playing-inner.host-ft-teams-dense--game {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+#game-screen .host-ft-teams-dense--game .host-ft-score-card {
+    min-height: 3.5rem;
+    padding: 0.45rem 0.4rem;
+    gap: 0.25rem;
+}
+
+#game-screen .host-ft-teams-dense--game .host-ft-card-name {
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
+#game-screen .host-ft-teams-dense--game .host-ft-card-num {
+    font-size: 1.2rem;
+    line-height: 1.1;
+}
+
+@media (max-width: 720px) {
+    #game-screen .host-ft-playing-inner.host-ft-teams-dense--game {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* Экран раунда: «Текущие результаты» — крупные карточки на всю ширину */
+body.standalone-host #flexible-tournament-match.active {
+    overflow-y: auto;
+    align-items: flex-start;
+}
+
+body.standalone-host #flexible-tournament-match .container {
+    max-width: min(1200px, 98vw);
+    width: 100%;
+}
+
+#ft-match-info .ft-score-strip.host-ft-score-strip--match {
+    width: 100%;
+    margin: 0.75rem 0 1rem;
+}
+
+#ft-match-info .host-ft-playing-inner.host-ft-teams-dense--match {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+#ft-match-info .host-ft-teams-dense--match .host-ft-score-card {
+    min-height: 4.5rem;
+    padding: 0.55rem 0.45rem;
+    gap: 0.3rem;
+}
+
+#ft-match-info .host-ft-teams-dense--match .host-ft-card-name {
+    font-size: 0.82rem;
+    line-height: 1.2;
+}
+
+#ft-match-info .host-ft-teams-dense--match .host-ft-card-num {
+    font-size: 1.45rem;
+}
+
+#ft-match-info.ft-match-info--many-teams {
+    padding: 1.15rem 1.25rem;
+}
+
+#ft-match-info.ft-match-info--many-teams p {
+    font-size: 0.95rem;
+    margin: 0.3rem 0;
+}
+
+@media (max-width: 900px) {
+    #ft-match-info .host-ft-playing-inner.host-ft-teams-dense--match {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 /* Окно дозагрузки пакета при исчерпании пользовательских слов */
