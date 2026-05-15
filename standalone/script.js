@@ -521,6 +521,9 @@ function showScreen(screenId) {
         screen.classList.remove('active');
     });
     document.getElementById(screenId).classList.add('active');
+    if (screenId === 'flexible-tournament-setup' && typeof renderFlexibleTeamsList === 'function') {
+        renderFlexibleTeamsList();
+    }
     if (typeof updateHostPlayingScoreboard === 'function') {
         updateHostPlayingScoreboard();
     }
@@ -2144,14 +2147,17 @@ function showFlexibleTournamentFromMenu() {
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
+function clearFlexibleNextRoundPicks() {
+    flexibleTournamentState.nextRoundTeamIndices = [];
+}
+
 function flexibleAfterRoundToSetup() {
     flexibleTournamentState.roundTeamIndices = [];
     flexibleTournamentState.flexibleTurnIndex = 0;
     flexibleTournamentState.roundScores = [];
     flexibleTournamentState.roundPlayerResults = [];
     flexibleTournamentState.pendingRoundTeamIndices = null;
-    flexibleTournamentState.nextRoundTeamIndices = [];
-    renderFlexibleTeamsList();
+    clearFlexibleNextRoundPicks();
     showScreen('flexible-tournament-setup');
     writeFlexibleTournamentToStorage();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
@@ -2444,6 +2450,7 @@ function startFlexibleRoundFromCall() {
     }
     flexibleTournamentState.pendingRoundTeamIndices = null;
     flexibleTournamentState.roundTeamIndices = picks.slice();
+    clearFlexibleNextRoundPicks();
     flexibleTournamentState.flexibleTurnIndex = 0;
     flexibleTournamentState.roundScores = picks.map(() => 0);
     flexibleTournamentState.roundPlayerResults = [];
@@ -2743,6 +2750,7 @@ function endFlexibleRound() {
             <p class="hint ft-summary-footnote">В колонках игроков — очки за раунд по каждому слоту состава. «Итого» — сумма команды за этот раунд.</p>
         `;
     }
+    clearFlexibleNextRoundPicks();
     showScreen('flexible-round-results');
     writeFlexibleTournamentToStorage();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
@@ -2755,7 +2763,7 @@ function cancelFlexibleRound() {
     flexibleTournamentState.roundScores = [];
     flexibleTournamentState.roundPlayerResults = [];
     flexibleTournamentState.pendingRoundTeamIndices = null;
-    renderFlexibleTeamsList();
+    clearFlexibleNextRoundPicks();
     showScreen('flexible-tournament-setup');
     writeFlexibleTournamentToStorage();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
