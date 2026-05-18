@@ -359,6 +359,7 @@ function setupCustomPackControls() {
     const sourceCustom = document.getElementById('source-custom');
     const uploader = document.getElementById('custom-pack-uploader');
     const importBtn = document.getElementById('import-pack-btn');
+    const exportBtn = document.getElementById('export-unused-words-btn');
     const clearBtn = document.getElementById('clear-pack-btn');
     const input = document.getElementById('word-pack-input');
 
@@ -391,6 +392,10 @@ function setupCustomPackControls() {
                 showNotification('Ошибка загрузки файла');
             }
         });
+    }
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => exportUnusedCustomWords());
     }
 
     if (clearBtn) {
@@ -426,19 +431,61 @@ function updateWordSourceUI() {
     
     sourceCustom.checked = settings.wordSource === 'custom';
     sourceBuiltin.checked = settings.wordSource === 'builtin';
-    
+
+    updateCustomPackStatus();
     // Сбрасываем состояние игры при смене источника слов
     resetGameUI();
 }
 
+function getUnusedCustomWords() {
+    if (!CUSTOM_WORDS || !Array.isArray(CUSTOM_WORDS)) return [];
+    if (!CUSTOM_WORDS_USED) return [...CUSTOM_WORDS];
+    return CUSTOM_WORDS.filter((w) => !CUSTOM_WORDS_USED.has(w));
+}
+
+function exportUnusedCustomWords() {
+    if (settings.wordSource !== 'custom') {
+        showNotification('Выгрузка доступна только для пользовательских слов');
+        return;
+    }
+    const unused = getUnusedCustomWords();
+    if (!unused.length) {
+        showNotification('Нет неиспользованных слов для выгрузки');
+        return;
+    }
+    const body = unused.join('\n') + '\n';
+    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+    const baseName = ((CUSTOM_WORDS_META && CUSTOM_WORDS_META.fileName) || 'custom')
+        .replace(/\.txt$/i, '')
+        .replace(/[^\w\u0400-\u04FF.-]+/g, '_')
+        .slice(0, 80) || 'custom';
+    const fileName = `${baseName}-unused.txt`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showNotification(`Выгружено ${unused.length} неиспользованных слов`);
+}
+
 function updateCustomPackStatus() {
     const status = document.getElementById('custom-pack-status');
+    const exportBtn = document.getElementById('export-unused-words-btn');
     if (!status) return;
     if (!CUSTOM_WORDS) {
         status.textContent = 'Файл не загружен';
+        if (exportBtn) exportBtn.disabled = true;
         return;
     }
-    status.textContent = `Загружено слов: ${CUSTOM_WORDS.length}`;
+    const total = CUSTOM_WORDS.length;
+    const used = CUSTOM_WORDS_USED ? CUSTOM_WORDS_USED.size : 0;
+    const remaining = getUnusedCustomWords().length;
+    status.textContent = `Загружено: ${total}. Использовано: ${used}. Неиспользованных: ${remaining}.`;
+    if (exportBtn) exportBtn.disabled = remaining === 0;
 }
 
 // Загрузка пользовательских слов из localStorage
@@ -608,7 +655,11 @@ function showMainMenu() {
     if (prep) prep.style.display = 'none';
     showScreen('main-menu');
 }
-function showSettings() { updateSettingsUI(); showScreen('settings'); }
+function showSettings() {
+    updateSettingsUI();
+    updateCustomPackStatus();
+    showScreen('settings');
+}
 function showRules() { showScreen('rules'); }
 
 // Начало игры
@@ -2003,8 +2054,8 @@ function markWordsAsUsed() {
     // Сохраняем обновленное состояние
     localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED)));
     
-    // Обновляем информацию в UI
     updateMainInfoBanner();
+    updateCustomPackStatus();
 }
 
 // Немедленно помечаем конкретное слово как использованное (при показе)
@@ -2018,6 +2069,7 @@ function markWordAsUsedImmediate(word) {
             localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED)));
         } catch (_) {}
         updateMainInfoBanner();
+        updateCustomPackStatus();
     }
 }
 
@@ -2062,6 +2114,7 @@ window.resumeGame = resumeGame;
 window.endGame = endGame;
 window.endTournamentGame = endTournamentGame;
 window.newGame = newGame;
+window.exportUnusedCustomWords = exportUnusedCustomWords;
 
 // Соревновательный режим API
 window.showCompetitiveSetup = showCompetitiveSetup;

@@ -55,9 +55,11 @@
                 <label>Загрузка файла со словами:</label>
                 <input type="file" id="word-pack-input" accept=".txt">
                 <div class="uploader-buttons">
-                    <button class="btn btn-primary" id="import-pack-btn">Загрузить файл</button>
-                    <button class="btn btn-secondary" id="clear-pack-btn">Очистить слова</button>
+                    <button type="button" class="btn btn-primary" id="import-pack-btn">Загрузить файл</button>
+                    <button type="button" class="btn btn-secondary" id="export-unused-words-btn" disabled>Выгрузить неиспользованные</button>
+                    <button type="button" class="btn btn-secondary" id="clear-pack-btn">Очистить слова</button>
                 </div>
+                <p class="hint custom-pack-export-hint">Файл .txt с оставшимися словами (по одному в строке) можно снова загрузить перед следующим турниром.</p>
                 <div class="pack-status" id="custom-pack-status">Файл не загружен</div>
             </div>
             

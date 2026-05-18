@@ -202,8 +202,15 @@ body.standalone-host .container {
 
 .uploader-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
     margin-top: 0.75rem;
+}
+
+.custom-pack-export-hint {
+    margin: 0.65rem 0 0;
+    font-size: 0.88rem;
+    line-height: 1.35;
 }
 
 .pack-status {
