@@ -213,6 +213,48 @@ body.standalone-host .container {
     line-height: 1.35;
 }
 
+.custom-pack-list {
+    margin: 0.75rem 0 0;
+    padding: 0.65rem 0.85rem;
+    list-style: none;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    max-height: 10rem;
+    overflow-y: auto;
+}
+
+.custom-pack-list.hidden {
+    display: none;
+}
+
+.custom-pack-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.custom-pack-list li:last-child {
+    border-bottom: none;
+}
+
+.custom-pack-list-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.custom-pack-list-count {
+    flex-shrink: 0;
+    opacity: 0.75;
+    font-size: 0.85rem;
+}
+
 .pack-status {
     margin-top: 0.75rem;
     color: rgba(255,255,255,0.95);

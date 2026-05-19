@@ -48,19 +48,21 @@
                     <label><input type="radio" name="word-source" id="source-builtin" value="builtin" checked> Встроенные</label>
                     <label><input type="radio" name="word-source" id="source-custom" value="custom"> Пользовательские</label>
                 </div>
-                <p class="hint">Пользовательские слова: выберите файл <code>.txt</code> с одним словом в строке.</p>
+                <p class="hint">Пользовательские слова: один или несколько файлов <code>.txt</code> (по одному слову в строке). Можно выбрать сразу несколько файлов.</p>
             </div>
 
             <div class="settings-group" id="custom-pack-uploader" style="display:none;">
-                <label>Загрузка файла со словами:</label>
-                <input type="file" id="word-pack-input" accept=".txt">
+                <label>Загрузка пакетов со словами:</label>
+                <input type="file" id="word-pack-input" accept=".txt" multiple>
                 <div class="uploader-buttons">
-                    <button type="button" class="btn btn-primary" id="import-pack-btn">Загрузить файл</button>
+                    <button type="button" class="btn btn-primary" id="import-pack-btn">Загрузить пакеты</button>
+                    <button type="button" class="btn btn-secondary" id="append-pack-btn">Добавить к загруженным</button>
                     <button type="button" class="btn btn-secondary" id="export-unused-words-btn" disabled>Выгрузить неиспользованные</button>
-                    <button type="button" class="btn btn-secondary" id="clear-pack-btn">Очистить слова</button>
+                    <button type="button" class="btn btn-secondary" id="clear-pack-btn">Очистить всё</button>
                 </div>
-                <p class="hint custom-pack-export-hint">Файл .txt с оставшимися словами (по одному в строке) можно снова загрузить перед следующим турниром.</p>
-                <div class="pack-status" id="custom-pack-status">Файл не загружен</div>
+                <p class="hint custom-pack-export-hint">«Загрузить» — заменить все пакеты и сбросить прогресс по словам. «Добавить» — дописать файлы к уже загруженным, прогресс сохраняется.</p>
+                <ul id="custom-pack-list" class="custom-pack-list hidden" aria-label="Загруженные пакеты"></ul>
+                <div class="pack-status" id="custom-pack-status">Пакеты не загружены</div>
             </div>
             
             <div class="settings-group">
@@ -188,12 +190,12 @@
             <div id="custom-pack-depleted-overlay" class="custom-pack-depleted-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="custom-pack-depleted-title">
                 <div class="custom-pack-depleted-dialog">
                     <h3 id="custom-pack-depleted-title">Слова закончились</h3>
-                    <p class="custom-pack-depleted-lead">Игра на паузе. Выберите новый файл <strong>.txt</strong> (по одному слову в строке) и нажмите «Загрузить и продолжить» — раунд продолжится с новым пакетом.</p>
+                    <p class="custom-pack-depleted-lead">Игра на паузе. Выберите один или несколько файлов <strong>.txt</strong> (по одному слову в строке) и нажмите «Загрузить и продолжить» — раунд продолжится с новым пакетом.</p>
                     <div class="custom-pack-depleted-row">
-                        <input type="file" id="custom-pack-depleted-input" accept=".txt" class="custom-pack-depleted-file">
+                        <input type="file" id="custom-pack-depleted-input" accept=".txt" multiple class="custom-pack-depleted-file">
                         <button type="button" class="btn btn-primary" id="custom-pack-depleted-import">Загрузить и продолжить</button>
                     </div>
-                    <p class="hint">Новый файл заменит пакет в памяти и сбросит отметки «уже сыграно» для этих слов.</p>
+                    <p class="hint">Новые файлы заменят все пакеты в памяти и сбросит отметки «уже сыграно» для этих слов.</p>
                     <div class="custom-pack-depleted-actions">
                         <button type="button" class="btn btn-secondary" id="custom-pack-depleted-endgame">Завершить игру</button>
                     </div>

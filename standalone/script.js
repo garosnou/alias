@@ -34,7 +34,7 @@ let settings = {
 
 // Хранилище пользовательских слов (в памяти)
 let CUSTOM_WORDS = null;
-let CUSTOM_WORDS_META = { fileName: null, usedCount: 0, total: 0 };
+let CUSTOM_WORDS_META = { packs: [], fileName: null, usedCount: 0, total: 0 };
 let CUSTOM_WORDS_USED = new Set(); // множество использованных слов (строки в верхнем регистре)
 
 
@@ -254,22 +254,85 @@ document.addEventListener('DOMContentLoaded', function() {
     updateMainInfoBanner();
 });
 
-/** Сохранить пользовательский пакет и сбросить «уже сыграно» */
-function installCustomWordPack(words, fileName) {
-    CUSTOM_WORDS = words;
+function normalizeCustomWordsMeta(meta) {
+    if (!meta || typeof meta !== 'object') {
+        return { packs: [], total: 0, fileName: null };
+    }
+    if (Array.isArray(meta.packs) && meta.packs.length) {
+        const packs = meta.packs.map((p) => ({
+            name: String(p.name || 'custom.txt'),
+            count: Number(p.count) || 0
+        }));
+        return {
+            packs,
+            total: meta.total != null ? meta.total : 0,
+            fileName: meta.fileName || packs.map((p) => p.name).join(', ')
+        };
+    }
+    if (meta.fileName) {
+        const packs = [{ name: String(meta.fileName), count: Number(meta.total) || 0 }];
+        return { packs, total: meta.total || 0, fileName: meta.fileName };
+    }
+    return { packs: [], total: 0, fileName: null };
+}
+
+function persistCustomWordsStorage() {
+    if (!CUSTOM_WORDS) return;
     try {
-        localStorage.setItem('alias-custom-words', JSON.stringify(words));
+        localStorage.setItem('alias-custom-words', JSON.stringify(CUSTOM_WORDS));
     } catch (_) {}
-    CUSTOM_WORDS_META = { fileName: fileName || 'custom.txt', usedCount: 0, total: words.length };
     try {
         localStorage.setItem('alias-custom-words-meta', JSON.stringify(CUSTOM_WORDS_META));
     } catch (_) {}
-    CUSTOM_WORDS_USED = new Set();
     try {
-        localStorage.removeItem('alias-custom-words-used');
+        localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED || [])));
     } catch (_) {}
+}
+
+/** packs: [{ name, count }]; resetUsed — сбросить «уже сыграно» */
+function installCustomWordPacks(words, packs, options) {
+    const resetUsed = !options || options.resetUsed !== false;
+    CUSTOM_WORDS = words;
+    const packList = Array.isArray(packs) ? packs : [];
+    CUSTOM_WORDS_META = {
+        packs: packList,
+        total: words.length,
+        fileName: packList.map((p) => p.name).join(', ') || 'custom.txt',
+        usedCount: 0
+    };
+    if (resetUsed) {
+        CUSTOM_WORDS_USED = new Set();
+        try {
+            localStorage.removeItem('alias-custom-words-used');
+        } catch (_) {}
+    }
+    persistCustomWordsStorage();
+    renderCustomPackList();
     updateCustomPackStatus();
     updateMainInfoBanner();
+}
+
+/** Один файл (совместимость) */
+function installCustomWordPack(words, fileName) {
+    installCustomWordPacks(words, [{ name: fileName || 'custom.txt', count: words.length }], { resetUsed: true });
+}
+
+function renderCustomPackList() {
+    const list = document.getElementById('custom-pack-list');
+    if (!list) return;
+    const meta = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
+    if (!CUSTOM_WORDS || !meta.packs.length) {
+        list.innerHTML = '';
+        list.classList.add('hidden');
+        return;
+    }
+    list.classList.remove('hidden');
+    list.innerHTML = meta.packs
+        .map(
+            (p) =>
+                `<li><span class="custom-pack-list-name">${escapeHtmlFlexible(p.name)}</span> <span class="custom-pack-list-count">${p.count} сл.</span></li>`
+        )
+        .join('');
 }
 
 function openCustomWordPackDepletedOverlay() {
@@ -305,8 +368,8 @@ function setupCustomPackDepletedOverlay() {
                 return;
             }
             try {
-                const words = await parseWordFile(files[0]);
-                installCustomWordPack(words, files[0].name || 'custom.txt');
+                const { words, packs } = await parseWordFiles(files);
+                installCustomWordPacks(words, packs, { resetUsed: true });
                 const WORDS_BATCH_SIZE = 50;
                 const more = getWordsForCurrentSource(gameState.category, WORDS_BATCH_SIZE) || [];
                 if (!more.length) {
@@ -337,7 +400,11 @@ function setupCustomPackDepletedOverlay() {
                     showCurrentWord();
                     updateGameUI();
                 }
-                showNotification('Пакет загружен, игра продолжается');
+                showNotification(
+                    packs.length > 1
+                        ? `Загружено ${packs.length} пакетов (${words.length} слов), игра продолжается`
+                        : 'Пакет загружен, игра продолжается'
+                );
                 if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
             } catch (e) {
                 console.error(e);
@@ -359,6 +426,7 @@ function setupCustomPackControls() {
     const sourceCustom = document.getElementById('source-custom');
     const uploader = document.getElementById('custom-pack-uploader');
     const importBtn = document.getElementById('import-pack-btn');
+    const appendBtn = document.getElementById('append-pack-btn');
     const exportBtn = document.getElementById('export-unused-words-btn');
     const clearBtn = document.getElementById('clear-pack-btn');
     const input = document.getElementById('word-pack-input');
@@ -376,22 +444,43 @@ function setupCustomPackControls() {
         });
     }
 
+    async function importCustomPackFiles(appendMode) {
+        const files = input && input.files ? Array.from(input.files) : [];
+        if (!files.length) {
+            showNotification('Выберите один или несколько файлов .txt');
+            return;
+        }
+        try {
+            const { words, packs } = await parseWordFiles(files);
+            if (appendMode && CUSTOM_WORDS && CUSTOM_WORDS.length) {
+                const meta = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
+                const merged = [...new Set([...CUSTOM_WORDS, ...words])];
+                const added = merged.length - CUSTOM_WORDS.length;
+                installCustomWordPacks(merged, meta.packs.concat(packs), { resetUsed: false });
+                showNotification(
+                    `Добавлено ${packs.length} пакет(ов): +${added} новых слов (всего ${merged.length})`
+                );
+            } else {
+                installCustomWordPacks(words, packs, { resetUsed: true });
+                showNotification(
+                    packs.length > 1
+                        ? `Загружено ${packs.length} пакетов, ${words.length} уникальных слов`
+                        : `Загружено ${words.length} слов`
+                );
+            }
+            if (input) input.value = '';
+        } catch (e) {
+            console.error(e);
+            showNotification(e && e.message ? String(e.message) : 'Ошибка загрузки файлов');
+        }
+    }
+
     if (importBtn) {
-        importBtn.addEventListener('click', async () => {
-            const files = input && input.files ? Array.from(input.files) : [];
-            if (!files.length) {
-                showNotification('Выберите папку/файлы с .txt');
-                return;
-            }
-            try {
-                const words = await parseWordFile(files[0]);
-                installCustomWordPack(words, files[0].name || 'custom.txt');
-                showNotification('Файл загружен!');
-            } catch (e) {
-                console.error(e);
-                showNotification('Ошибка загрузки файла');
-            }
-        });
+        importBtn.addEventListener('click', () => importCustomPackFiles(false));
+    }
+
+    if (appendBtn) {
+        appendBtn.addEventListener('click', () => importCustomPackFiles(true));
     }
 
     if (exportBtn) {
@@ -402,20 +491,20 @@ function setupCustomPackControls() {
         clearBtn.addEventListener('click', () => {
             CUSTOM_WORDS = null;
             localStorage.removeItem('alias-custom-words');
-            CUSTOM_WORDS_META = { fileName: null, usedCount: 0, total: 0 };
+            CUSTOM_WORDS_META = { packs: [], fileName: null, usedCount: 0, total: 0 };
             localStorage.removeItem('alias-custom-words-meta');
-            // также сбрасываем список сыгранных слов
             CUSTOM_WORDS_USED = new Set();
             localStorage.removeItem('alias-custom-words-used');
+            renderCustomPackList();
             updateCustomPackStatus();
             showNotification('Пользовательские слова очищены');
             updateMainInfoBanner();
-            // Сбрасываем состояние игры при очистке словаря
             resetGameUI();
         });
     }
 
     updateCustomPackStatus();
+    renderCustomPackList();
 }
 
 function updateWordSourceUI() {
@@ -455,10 +544,14 @@ function exportUnusedCustomWords() {
     }
     const body = unused.join('\n') + '\n';
     const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
-    const baseName = ((CUSTOM_WORDS_META && CUSTOM_WORDS_META.fileName) || 'custom')
-        .replace(/\.txt$/i, '')
-        .replace(/[^\w\u0400-\u04FF.-]+/g, '_')
-        .slice(0, 80) || 'custom';
+    const meta = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
+    const baseName =
+        meta.packs.length > 1
+            ? `alias-${meta.packs.length}-packs`
+            : ((meta.fileName || 'custom').split(',')[0] || 'custom')
+                  .replace(/\.txt$/i, '')
+                  .replace(/[^\w\u0400-\u04FF.-]+/g, '_')
+                  .slice(0, 80) || 'custom';
     const fileName = `${baseName}-unused.txt`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -477,15 +570,19 @@ function updateCustomPackStatus() {
     const exportBtn = document.getElementById('export-unused-words-btn');
     if (!status) return;
     if (!CUSTOM_WORDS) {
-        status.textContent = 'Файл не загружен';
+        status.textContent = 'Пакеты не загружены';
         if (exportBtn) exportBtn.disabled = true;
+        renderCustomPackList();
         return;
     }
+    const meta = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
     const total = CUSTOM_WORDS.length;
     const used = CUSTOM_WORDS_USED ? CUSTOM_WORDS_USED.size : 0;
     const remaining = getUnusedCustomWords().length;
-    status.textContent = `Загружено: ${total}. Использовано: ${used}. Неиспользованных: ${remaining}.`;
+    const packsLabel = meta.packs.length ? `Пакетов: ${meta.packs.length}. ` : '';
+    status.textContent = `${packsLabel}Слов: ${total}. Использовано: ${used}. Неиспользованных: ${remaining}.`;
     if (exportBtn) exportBtn.disabled = remaining === 0;
+    renderCustomPackList();
 }
 
 // Загрузка пользовательских слов из localStorage
@@ -495,7 +592,10 @@ function loadCustomWordsFromStorage() {
     try {
         CUSTOM_WORDS = JSON.parse(raw);
         const metaRaw = localStorage.getItem('alias-custom-words-meta');
-        CUSTOM_WORDS_META = metaRaw ? JSON.parse(metaRaw) : { fileName: null, usedCount: 0, total: CUSTOM_WORDS.length };
+        CUSTOM_WORDS_META = normalizeCustomWordsMeta(
+            metaRaw ? JSON.parse(metaRaw) : { fileName: null, usedCount: 0, total: CUSTOM_WORDS.length }
+        );
+        CUSTOM_WORDS_META.total = CUSTOM_WORDS.length;
         const usedRaw = localStorage.getItem('alias-custom-words-used');
         if (usedRaw) {
             try { CUSTOM_WORDS_USED = new Set(JSON.parse(usedRaw)); } catch (_) { CUSTOM_WORDS_USED = new Set(); }
@@ -504,9 +604,10 @@ function loadCustomWordsFromStorage() {
         }
     } catch (_) {
         CUSTOM_WORDS = null;
-        CUSTOM_WORDS_META = { fileName: null, usedCount: 0, total: 0 };
+        CUSTOM_WORDS_META = { packs: [], fileName: null, usedCount: 0, total: 0 };
         CUSTOM_WORDS_USED = new Set();
     }
+    renderCustomPackList();
 }
 
 // Загрузка настроек из localStorage
@@ -1767,11 +1868,17 @@ function updateMainInfoBanner() {
         if (!CUSTOM_WORDS || !Array.isArray(CUSTOM_WORDS) || CUSTOM_WORDS.length === 0) {
             text.textContent = `Режим: Пользовательский. Слова не загружены.`;
         } else {
-            const fileName = CUSTOM_WORDS_META.fileName || 'custom.txt';
-            const total = CUSTOM_WORDS_META.total || CUSTOM_WORDS.length;
+            const meta = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
+            const total = CUSTOM_WORDS.length;
             const used = CUSTOM_WORDS_USED.size;
-            const remaining = Math.max(total - used, 0);
-            text.textContent = `Режим: Пользовательский. Пакет: ${fileName}. Осталось слов: ${remaining} из ${total}.`;
+            const remaining = getUnusedCustomWords().length;
+            const packsPart =
+                meta.packs.length > 1
+                    ? `${meta.packs.length} пакетов`
+                    : meta.packs[0]
+                      ? meta.packs[0].name
+                      : meta.fileName || 'custom.txt';
+            text.textContent = `Режим: Пользовательский. ${packsPart}. Осталось слов: ${remaining} из ${total}.`;
         }
     } else {
         text.textContent = `Режим: Стандартный.`;
@@ -2080,6 +2187,26 @@ function showNotification(message) {
     notification.textContent = message;
     document.body.appendChild(notification);
     setTimeout(() => { notification.remove(); }, 3000);
+}
+
+/** Несколько .txt: объединение с дедупликацией, метаданные по каждому файлу */
+async function parseWordFiles(files) {
+    const list = Array.from(files || []).filter((f) => f && /\.txt$/i.test(f.name || ''));
+    if (!list.length) {
+        const any = Array.from(files || []);
+        if (!any.length) throw new Error('Не выбраны файлы');
+        list.push(...any);
+    }
+    const packs = [];
+    const allWords = [];
+    for (const file of list) {
+        const words = await parseWordFile(file);
+        packs.push({ name: file.name || 'custom.txt', count: words.length });
+        allWords.push(...words);
+    }
+    const uniqueWords = [...new Set(allWords)];
+    if (!uniqueWords.length) throw new Error('Файлы не содержат слов');
+    return { words: uniqueWords, packs };
 }
 
 // Парсинг файла со словами
