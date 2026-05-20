@@ -339,7 +339,7 @@
         } else if (screenId === 'flexible-tournament-call') {
             phase = 'flexible-call';
             tournamentBoard = {
-                boardTitle: 'Гибкий турнир',
+                boardTitle: '',
                 hallMode: 'flexible-call',
                 roundTitle: 'Раунд',
                 roundSubtitle: 'На экране зала отображаются команды этого раунда.',
@@ -359,7 +359,7 @@
                 }
             }
             tournamentBoard = {
-                boardTitle: 'Гибкий турнир',
+                boardTitle: '',
                 hallMode: 'flexible-match',
                 matchScores: scrapeFlexibleMatchScores(),
                 playerInfo: flexibleMatchPlayerBlock(),
