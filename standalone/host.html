@@ -174,7 +174,7 @@
                 </button>
                 <button class="btn btn-danger" onclick="skipWord()" id="skip-btn">
                     <span class="btn-icon">✗</span>
-                    Пропустить
+                    <span id="skip-btn-label">Пропустить</span>
                 </button>
             </div>
             
@@ -377,6 +377,40 @@
         </div>
     </div>
 
+    <div id="flexible-turn-results" class="screen screen--flexible-turn-results">
+        <div class="container flexible-turn-results-shell">
+            <h2 class="flexible-turn-results-title">Итог хода</h2>
+            <div class="flexible-turn-hero">
+                <p class="flexible-turn-line"><strong>Игрок:</strong> <span id="ft-turn-player-name">—</span></p>
+                <p class="flexible-turn-line"><strong>Команда:</strong> <span id="ft-turn-team-name">—</span></p>
+            </div>
+            <div class="results-stats flexible-turn-stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="ft-turn-player-score">0</div>
+                    <div class="stat-label">Очки игрока</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="ft-turn-team-score">0</div>
+                    <div class="stat-label">Очки команды в раунде</div>
+                </div>
+            </div>
+            <p class="hint flexible-turn-edit-hint">Нажмите на слово в списке, чтобы исправить засчитывание.</p>
+            <div class="words-lists flexible-turn-words">
+                <div class="words-section">
+                    <h3>Отгаданные (<span id="ft-turn-correct-count">0</span>)</h3>
+                    <div class="words-container" id="ft-turn-correct-words"></div>
+                </div>
+                <div class="words-section">
+                    <h3>Не угадали (<span id="ft-turn-skipped-count">0</span>)</h3>
+                    <div class="words-container" id="ft-turn-skipped-words"></div>
+                </div>
+            </div>
+            <div class="tournament-buttons">
+                <button type="button" class="btn btn-primary" onclick="confirmFlexibleTurnContinue()">К командам — следующий игрок</button>
+            </div>
+        </div>
+    </div>
+
     <div id="flexible-round-results" class="screen screen--flexible-round-results">
         <div class="container flexible-round-results-shell">
             <h2 class="flexible-round-results-title">Итоги раунда</h2>
@@ -388,7 +422,7 @@
         </div>
     </div>
 
-    <!-- Настройка турнира -->
+<!-- Настройка турнира -->
     <div id="tournament-setup" class="screen">
         <div class="container">
             <h2>Настройка турнира</h2>

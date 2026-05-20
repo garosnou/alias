@@ -260,6 +260,30 @@
                 body: safeText(document.getElementById('competitive-results-list'))
             };
         }
+        if (screenId === 'flexible-turn-results') {
+            function scrapeFtTurnWords(containerId) {
+                var root = document.getElementById(containerId);
+                if (!root) return [];
+                var words = [];
+                root.querySelectorAll('.word-item').forEach(function (el) {
+                    var t = safeText(el);
+                    if (t) words.push(t);
+                });
+                return words;
+            }
+            return {
+                variant: 'flexible-turn',
+                title: 'Итог хода',
+                playerName: safeText(document.getElementById('ft-turn-player-name')),
+                teamName: safeText(document.getElementById('ft-turn-team-name')),
+                playerScore: safeText(document.getElementById('ft-turn-player-score')),
+                teamScore: safeText(document.getElementById('ft-turn-team-score')),
+                correctCount: safeText(document.getElementById('ft-turn-correct-count')),
+                skippedCount: safeText(document.getElementById('ft-turn-skipped-count')),
+                correctWords: scrapeFtTurnWords('ft-turn-correct-words'),
+                skippedWords: scrapeFtTurnWords('ft-turn-skipped-words')
+            };
+        }
         if (screenId === 'flexible-round-results') {
             var fs = scrapeFlexibleRoundSummary();
             if (fs.rows.length) {
@@ -298,6 +322,7 @@
             screenId === 'match-results' ||
             screenId === 'tournament-results' ||
             screenId === 'competitive-results' ||
+            screenId === 'flexible-turn-results' ||
             screenId === 'flexible-round-results'
         ) {
             phase = 'results';
@@ -346,6 +371,7 @@
         } else if (screenId === 'game-screen') {
             if (prepVisible) phase = 'prep';
             else if (gs && gs.isPaused) phase = 'paused';
+            else if (gs && gs.finalWordPhase) phase = 'final-word';
             else if (gs && gs.isPlaying) phase = 'playing';
             else phase = 'lobby';
         }
@@ -409,7 +435,8 @@
                 hallScoreboard: hallScoreboard,
                 skipsRemaining: gs && gs.maxSkipsAllowed > 0 ? gs.skipsRemaining : null,
                 maxSkipsAllowed: gs && gs.maxSkipsAllowed > 0 ? gs.maxSkipsAllowed : null,
-                awaitingCustomWordPack: !!(gs && gs.awaitingCustomWordPack)
+                awaitingCustomWordPack: !!(gs && gs.awaitingCustomWordPack),
+                finalWordPhase: !!(gs && gs.finalWordPhase)
             }
         };
     }
@@ -545,6 +572,7 @@
         'endFlexibleRound',
         'cancelFlexibleRound',
         'flexibleAfterRoundToSetup',
+        'confirmFlexibleTurnContinue',
         'resetFlexibleTournamentPersisted',
         'addFlexibleTeamQuick',
         'addFlexibleTeamFromForm',

@@ -110,6 +110,32 @@
                 <p class="drc-subtitle" id="drc-subtitle"></p>
                 <div class="drc-list" id="drc-list"></div>
             </div>
+            <div id="display-results-flexible-turn" class="display-results-flexible-turn hidden">
+                <div class="dft-hero">
+                    <p class="dft-line"><strong>Игрок:</strong> <span id="dft-player-name">—</span></p>
+                    <p class="dft-line"><strong>Команда:</strong> <span id="dft-team-name">—</span></p>
+                </div>
+                <div class="dft-stats">
+                    <div class="dft-stat-card">
+                        <div class="dft-stat-num" id="dft-player-score">0</div>
+                        <div class="dft-stat-lbl">Очки игрока</div>
+                    </div>
+                    <div class="dft-stat-card">
+                        <div class="dft-stat-num" id="dft-team-score">0</div>
+                        <div class="dft-stat-lbl">Очки команды в раунде</div>
+                    </div>
+                </div>
+                <div class="dft-words-grid">
+                    <section class="dft-words-panel">
+                        <h3 class="dft-words-h3">Отгаданные (<span id="dft-correct-count">0</span>)</h3>
+                        <div id="dft-correct-words" class="dft-word-tags"></div>
+                    </section>
+                    <section class="dft-words-panel">
+                        <h3 class="dft-words-h3">Не угадали (<span id="dft-skipped-count">0</span>)</h3>
+                        <div id="dft-skipped-words" class="dft-word-tags"></div>
+                    </section>
+                </div>
+            </div>
             <div id="display-results-flexible-round" class="display-results-flexible-round hidden">
                 <div id="display-fr-grid" class="display-fr-grid" role="table" aria-label="Итоги раунда"></div>
                 <p id="display-fr-footnote" class="display-fr-footnote hidden"></p>

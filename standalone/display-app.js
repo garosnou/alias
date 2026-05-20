@@ -67,6 +67,52 @@
         });
     }
 
+    function fillDftWordTags(container, words, tagClass) {
+        if (!container) return;
+        container.textContent = '';
+        if (!words || !words.length) {
+            var empty = document.createElement('span');
+            empty.className = 'dft-no-words';
+            empty.textContent = tagClass === 'skipped' ? 'Нет неугаданных слов' : 'Нет отгаданных слов';
+            container.appendChild(empty);
+            return;
+        }
+        (words || []).forEach(function (w) {
+            var s = document.createElement('span');
+            s.className = 'dft-tag' + (tagClass ? ' dft-tag--' + tagClass : '');
+            s.textContent = w;
+            container.appendChild(s);
+        });
+    }
+
+    function renderFlexibleTurnResults(r) {
+        var root = document.getElementById('display-results-flexible-turn');
+        if (!root) return;
+        root.classList.remove('hidden');
+        var pn = document.getElementById('dft-player-name');
+        var tn = document.getElementById('dft-team-name');
+        var ps = document.getElementById('dft-player-score');
+        var ts = document.getElementById('dft-team-score');
+        var cc = document.getElementById('dft-correct-count');
+        var sc = document.getElementById('dft-skipped-count');
+        if (pn) pn.textContent = r.playerName || '—';
+        if (tn) tn.textContent = r.teamName || '—';
+        if (ps) ps.textContent = r.playerScore != null && r.playerScore !== '' ? String(r.playerScore) : '0';
+        if (ts) ts.textContent = r.teamScore != null && r.teamScore !== '' ? String(r.teamScore) : '0';
+        var correctN =
+            r.correctCount != null && r.correctCount !== ''
+                ? String(r.correctCount)
+                : String((r.correctWords || []).length);
+        var skippedN =
+            r.skippedCount != null && r.skippedCount !== ''
+                ? String(r.skippedCount)
+                : String((r.skippedWords || []).length);
+        if (cc) cc.textContent = correctN;
+        if (sc) sc.textContent = skippedN;
+        fillDftWordTags(document.getElementById('dft-correct-words'), r.correctWords || [], 'correct');
+        fillDftWordTags(document.getElementById('dft-skipped-words'), r.skippedWords || [], 'skipped');
+    }
+
     function renderMatchResults(r) {
         var drm = document.getElementById('display-results-match');
         if (!drm) return;
@@ -472,8 +518,9 @@
             return;
         }
 
-        if (phase === 'playing' || phase === 'lobby') {
+        if (phase === 'playing' || phase === 'lobby' || phase === 'final-word') {
             gameEl.classList.remove('hidden');
+            gameEl.classList.toggle('display-game--final-word', phase === 'final-word');
             wordEl.textContent = state.word || '—';
             timerEl.textContent = String(state.timeRemaining != null ? state.timeRemaining : '');
             var p = typeof state.progress === 'number' ? state.progress : 100;
@@ -481,7 +528,9 @@
                 progressFill.style.width = Math.max(0, Math.min(100, p)) + '%';
                 progressFill.style.removeProperty('background');
             }
-            var warn = state.timeRemaining != null && state.timeRemaining <= 10;
+            var warn =
+                phase === 'final-word' ||
+                (state.timeRemaining != null && state.timeRemaining <= 10);
             timerEl.classList.toggle('warn', warn);
             if (timerRow) timerRow.classList.toggle('warn', warn);
             var compBn = document.getElementById('display-comp-banner');
@@ -630,6 +679,7 @@
             resultsEl.classList.remove('hidden');
             var r = state.results;
             resultsEl.classList.toggle('display-results--flexible-round', r.variant === 'flexible-round');
+            resultsEl.classList.toggle('display-results--flexible-turn', r.variant === 'flexible-turn');
             resultsTitle.textContent = r.title || 'Результаты';
 
             var drmEl = document.getElementById('display-results-match');
@@ -638,6 +688,8 @@
             if (drcEl) drcEl.classList.add('hidden');
             var dfrEl = document.getElementById('display-results-flexible-round');
             if (dfrEl) dfrEl.classList.add('hidden');
+            var dftEl = document.getElementById('display-results-flexible-turn');
+            if (dftEl) dftEl.classList.add('hidden');
             resultsRound.classList.add('hidden');
             resultsGeneric.classList.add('hidden');
 
@@ -658,6 +710,8 @@
                 renderCompetitiveResults(r);
             } else if (r.variant === 'flexible-round') {
                 renderFlexibleRoundResults(r);
+            } else if (r.variant === 'flexible-turn') {
+                renderFlexibleTurnResults(r);
             } else {
                 resultsGeneric.classList.remove('hidden');
                 resultsBody.textContent = r.body || '';

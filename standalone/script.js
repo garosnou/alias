@@ -22,7 +22,9 @@ let gameState = {
     /** Пользовательский пакет исчерпан: пауза и окно дозагрузки .txt */
     awaitingCustomWordPack: false,
     /** Раунд начался без слов (пакет пуст) — после дозагрузки нужен отсчёт/таймер как при обычном старте */
-    timerNeverStarted: false
+    timerNeverStarted: false,
+    /** Гибкий турнир: время вышло, остаётся последнее слово без подгрузки новых */
+    finalWordPhase: false
 };
 
 // Настройки по умолчанию
@@ -251,6 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCustomPackControls();
     setupCustomPackDepletedOverlay();
     setupFlexibleTournamentFormListeners();
+    initFlexibleTurnResultsWordEdit();
     updateMainInfoBanner();
 });
 
@@ -837,7 +840,8 @@ function startGame() {
             correctWords: [],
             skippedWordsList: [],
             maxSkipsAllowed,
-            skipsRemaining
+            skipsRemaining,
+            finalWordPhase: false
         };
         showScreen('game-screen');
         updateGameUI();
@@ -869,7 +873,8 @@ function startGame() {
         correctWords: [],
         skippedWordsList: [],
         maxSkipsAllowed,
-        skipsRemaining
+        skipsRemaining,
+        finalWordPhase: false
     };
     
     showScreen('game-screen');
@@ -920,7 +925,13 @@ function startTimer() {
         if (!gameState.isPaused) {
             gameState.timeRemaining--;
             updateTimer();
-            if (gameState.timeRemaining <= 0) { endGame(); }
+            if (gameState.timeRemaining <= 0) {
+                if (isFlexibleActiveRound()) {
+                    enterFlexibleFinalWordPhase();
+                } else {
+                    endGame();
+                }
+            }
         }
     }, 1000);
 }
@@ -995,9 +1006,59 @@ function showCurrentWord() {
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
+function isFlexibleActiveRound() {
+    return !!(
+        flexibleTournamentState.isFlexibleMode &&
+        flexibleTournamentState.roundTeamIndices &&
+        flexibleTournamentState.roundTeamIndices.length
+    );
+}
+
+function enterFlexibleFinalWordPhase() {
+    if (!gameState.isPlaying || gameState.isPaused || gameState.finalWordPhase) return;
+    if (!isFlexibleActiveRound()) return;
+    if (!gameState.words.length) {
+        finalizeFlexibleTurnFromGame();
+        return;
+    }
+    if (gameState.currentWordIndex >= gameState.words.length) {
+        gameState.currentWordIndex = Math.max(0, gameState.words.length - 1);
+        showCurrentWord();
+    }
+    if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+        gameState.timerInterval = null;
+    }
+    gameState.timeRemaining = 0;
+    gameState.finalWordPhase = true;
+    updateTimer();
+    updateGameUI();
+    showNotification('Время вышло — угадайте последнее слово');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function flexNotGuessedLastWord() {
+    if (!gameState.isPlaying || gameState.isPaused || !gameState.finalWordPhase) return;
+    if (!isFlexibleActiveRound()) return;
+    gameState.skippedWords++;
+    if (gameState.currentWordIndex < gameState.words.length) {
+        gameState.skippedWordsList.push(gameState.words[gameState.currentWordIndex]);
+    }
+    finalizeFlexibleTurnFromGame();
+}
+
 // Правильный ответ
 function correctAnswer() {
     if (!gameState.isPlaying || gameState.isPaused) return;
+    if (gameState.finalWordPhase && isFlexibleActiveRound()) {
+        gameState.correctAnswers++;
+        gameState.score += calculateWordScore();
+        if (gameState.currentWordIndex < gameState.words.length) {
+            gameState.correctWords.push(gameState.words[gameState.currentWordIndex]);
+        }
+        finalizeFlexibleTurnFromGame();
+        return;
+    }
     gameState.correctAnswers++;
     gameState.score += calculateWordScore();
     // Добавляем текущее слово в список отгаданных
@@ -1010,6 +1071,10 @@ function correctAnswer() {
 // Пропуск слова
 function skipWord() {
     if (!gameState.isPlaying || gameState.isPaused) return;
+    if (gameState.finalWordPhase && isFlexibleActiveRound()) {
+        flexNotGuessedLastWord();
+        return;
+    }
     if (gameState.maxSkipsAllowed > 0 && (gameState.skipsRemaining == null || gameState.skipsRemaining <= 0)) {
         showNotification('Лимит пропусков исчерпан');
         return;
@@ -1027,6 +1092,7 @@ function skipWord() {
 
 // Переход к следующему слову
 function nextWord() {
+    if (gameState.finalWordPhase && isFlexibleActiveRound()) return;
     gameState.currentWordIndex++;
     if (gameState.currentWordIndex >= gameState.words.length) {
         const WORDS_BATCH_SIZE = 50;
@@ -1034,6 +1100,12 @@ function nextWord() {
         if (!more.length) {
             if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
                 pauseForCustomWordPack();
+                return;
+            }
+            if (isFlexibleActiveRound()) {
+                gameState.currentWordIndex = Math.max(0, gameState.words.length - 1);
+                showCurrentWord();
+                enterFlexibleFinalWordPhase();
                 return;
             }
             endGame();
@@ -1077,7 +1149,22 @@ function resumeGame() {
 
 function endGame() {
     closeCustomWordPackDepletedOverlay();
-    if (gameState) gameState.awaitingCustomWordPack = false;
+    if (
+        gameState &&
+        gameState.isPlaying &&
+        isFlexibleActiveRound()
+    ) {
+        if (!gameState.finalWordPhase) {
+            enterFlexibleFinalWordPhase();
+            return;
+        }
+        finalizeFlexibleTurnFromGame();
+        return;
+    }
+    if (gameState) {
+        gameState.awaitingCustomWordPack = false;
+        gameState.finalWordPhase = false;
+    }
     // Сбрасываем состояние игры независимо от текущего состояния
     gameState.isPlaying = false;
     gameState.isPaused = false; // Убираем паузу если она была
@@ -1113,8 +1200,6 @@ function endGame() {
     // Проверяем, находимся ли мы в турнирном режиме
     if (tournamentState.isTournamentMode) {
         endPlayerGame();
-    } else if (flexibleTournamentState.isFlexibleMode) {
-        endFlexiblePlayerTurn();
     } else if (competitiveState.isCompetitiveMode) {
         endCompetitivePlayerTurn();
     } else {
@@ -1929,11 +2014,24 @@ function updateGameUI() {
         gameStats.classList.toggle('host-game-stats--prominent', !!(flexRound && sid === 'game-screen'));
     }
     if (skipBtn) {
-        if (lim > 0 && rem <= 0 && gameState.isPlaying && !gameState.isPaused) {
+        const skipLabel = document.getElementById('skip-btn-label');
+        const inFinalWord =
+            gameState.finalWordPhase && flexRound && sid === 'game-screen' && gameState.isPlaying;
+        if (skipLabel) {
+            skipLabel.textContent = inFinalWord ? 'Не угадали' : 'Пропустить';
+        }
+        skipBtn.classList.toggle('btn-final-word-skip', !!inFinalWord);
+        if (inFinalWord) {
+            skipBtn.disabled = false;
+        } else if (lim > 0 && rem <= 0 && gameState.isPlaying && !gameState.isPaused) {
             skipBtn.disabled = true;
         } else {
             skipBtn.disabled = false;
         }
+    }
+    const timerEl = document.getElementById('timer');
+    if (timerEl) {
+        timerEl.classList.toggle('timer--final-word', !!(gameState.finalWordPhase && gameState.isPlaying));
     }
     updateHostPlayingScoreboard();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
@@ -2276,6 +2374,8 @@ window.endFlexibleRound = endFlexibleRound;
 window.endFlexibleRoundWithConfirm = endFlexibleRoundWithConfirm;
 window.cancelFlexibleRound = cancelFlexibleRound;
 window.flexibleAfterRoundToSetup = flexibleAfterRoundToSetup;
+window.confirmFlexibleTurnContinue = confirmFlexibleTurnContinue;
+window.flexNotGuessedLastWord = flexNotGuessedLastWord;
 window.resetFlexibleTournamentPersisted = resetFlexibleTournamentPersisted;
 window.addFlexibleTeamQuick = addFlexibleTeamQuick;
 window.buildHallScoreboardForSync = buildHallScoreboardForSync;
@@ -2290,6 +2390,10 @@ function escapeHtmlFlexible(s) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+function escapeAttrFlexible(s) {
+    return escapeHtmlFlexible(s);
 }
 
 function showFlexibleTournamentFromMenu() {
@@ -2805,12 +2909,9 @@ function startNextFlexiblePlayer() {
     startGame();
 }
 
-function endFlexiblePlayerTurn() {
+function recordFlexiblePlayerTurnResult() {
     const turn = getFlexibleCurrentTurn();
-    if (!turn) {
-        showScreen('flexible-tournament-match');
-        return;
-    }
+    if (!turn) return;
     const slot = turn.slot;
     const teamGlobalIdx = turn.teamGlobalIdx;
     const roundScores = flexibleTournamentState.roundScores;
@@ -2829,12 +2930,209 @@ function endFlexiblePlayerTurn() {
             skippedWords: Array.isArray(gameState.skippedWordsList) ? [...gameState.skippedWordsList] : []
         });
     } catch (_) {}
+}
 
+function finalizeFlexibleTurnFromGame() {
+    closeCustomWordPackDepletedOverlay();
+    if (gameState) {
+        gameState.awaitingCustomWordPack = false;
+        gameState.finalWordPhase = false;
+    }
+    gameState.isPlaying = false;
+    gameState.isPaused = false;
+
+    if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+        gameState.timerInterval = null;
+    }
+    if (competitiveState && competitiveState.prepTimer) {
+        clearInterval(competitiveState.prepTimer);
+        competitiveState.prepTimer = null;
+    }
+
+    if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
+        markWordsAsUsed();
+    }
+
+    const finalScore = Math.round(gameState.score);
+    const gameDuration = Math.round((Date.now() - gameState.startTime) / 1000);
+    saveGameResults(finalScore, gameState.correctAnswers, gameState.skippedWords, gameDuration);
+
+    recordFlexiblePlayerTurnResult();
+    showFlexiblePlayerTurnResults();
+}
+
+function getFlexiblePendingTurnResult() {
+    const turn = getFlexibleCurrentTurn();
+    const results = flexibleTournamentState.roundPlayerResults;
+    if (!turn || !results || !results.length) return null;
+    const last = results[results.length - 1];
+    if (
+        last.teamGlobalIndex === turn.teamGlobalIdx &&
+        last.playerIndex === turn.playerIndex &&
+        last.circle === turn.circle &&
+        last.playerName === turn.playerName
+    ) {
+        return last;
+    }
+    return null;
+}
+
+function applyFlexibleTurnWordCorrection() {
+    const pts = calculateWordScore();
+    const newScore = gameState.correctWords.length * pts;
+    const oldScore = Math.round(gameState.score);
+    const delta = newScore - oldScore;
+
+    gameState.score = newScore;
+    gameState.correctAnswers = gameState.correctWords.length;
+    gameState.skippedWords = gameState.skippedWordsList.length;
+
+    const turn = getFlexibleCurrentTurn();
+    const pending = getFlexiblePendingTurnResult();
+    if (turn && pending) {
+        pending.score = newScore;
+        pending.correctWords = [...gameState.correctWords];
+        pending.skippedWords = [...gameState.skippedWordsList];
+        const slot = turn.slot;
+        const roundScores = flexibleTournamentState.roundScores;
+        if (roundScores[slot] == null) roundScores[slot] = 0;
+        roundScores[slot] += delta;
+    }
+
+    refreshFlexiblePlayerTurnResultsUI();
+}
+
+function moveFlexibleTurnWordBetweenLists(fromList, wordIndex) {
+    if (fromList === 'skipped') {
+        if (wordIndex < 0 || wordIndex >= gameState.skippedWordsList.length) return;
+        const word = gameState.skippedWordsList.splice(wordIndex, 1)[0];
+        if (word != null) gameState.correctWords.push(word);
+    } else if (fromList === 'correct') {
+        if (wordIndex < 0 || wordIndex >= gameState.correctWords.length) return;
+        const word = gameState.correctWords.splice(wordIndex, 1)[0];
+        if (word != null) gameState.skippedWordsList.push(word);
+    } else {
+        return;
+    }
+    applyFlexibleTurnWordCorrection();
+}
+
+function handleFlexibleTurnWordClick(e) {
+    const screen = document.getElementById('flexible-turn-results');
+    if (!screen || !screen.classList.contains('active')) return;
+    const item = e.target.closest('.word-item--editable');
+    if (!item) return;
+    const list = item.getAttribute('data-ft-list');
+    const idx = parseInt(item.getAttribute('data-ft-index'), 10);
+    if (!list || Number.isNaN(idx)) return;
+
+    const words =
+        list === 'correct' ? gameState.correctWords : gameState.skippedWordsList;
+    const word = words[idx];
+    if (word == null) return;
+
+    const msg = list === 'skipped' ? 'Засчитать слово?' : 'Не засчитать слово?';
+    if (!confirm(msg)) return;
+
+    moveFlexibleTurnWordBetweenLists(list, idx);
+}
+
+function initFlexibleTurnResultsWordEdit() {
+    const root = document.querySelector('#flexible-turn-results .flexible-turn-words');
+    if (!root || root.dataset.ftEditBound === '1') return;
+    root.dataset.ftEditBound = '1';
+    root.addEventListener('click', handleFlexibleTurnWordClick);
+    root.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const item = e.target.closest('.word-item--editable');
+        if (!item) return;
+        e.preventDefault();
+        handleFlexibleTurnWordClick({ target: item });
+    });
+}
+
+function renderFlexibleTurnWordsList(containerId, words, emptyText, cssClass, listKind) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (words && words.length) {
+        el.innerHTML = words
+            .map(
+                (word, i) =>
+                    `<span class="word-item ${cssClass} word-item--editable" role="button" tabindex="0" ` +
+                    `data-ft-list="${listKind}" data-ft-index="${i}" ` +
+                    `title="Нажмите, чтобы исправить" aria-label="${escapeAttrFlexible(String(word))}">${escapeHtmlFlexible(String(word))}</span>`
+            )
+            .join('');
+    } else {
+        el.innerHTML = `<span class="no-words">${emptyText}</span>`;
+    }
+}
+
+function refreshFlexiblePlayerTurnResultsUI() {
+    const turn = getFlexibleCurrentTurn();
+    const playerNameEl = document.getElementById('ft-turn-player-name');
+    const teamNameEl = document.getElementById('ft-turn-team-name');
+    const playerScoreEl = document.getElementById('ft-turn-player-score');
+    const teamScoreEl = document.getElementById('ft-turn-team-score');
+    const correctCountEl = document.getElementById('ft-turn-correct-count');
+    const skippedCountEl = document.getElementById('ft-turn-skipped-count');
+
+    const playerScore = Math.round(gameState.score);
+    const teamScore =
+        turn && flexibleTournamentState.roundScores
+            ? flexibleTournamentState.roundScores[turn.slot] != null
+                ? flexibleTournamentState.roundScores[turn.slot]
+                : 0
+            : 0;
+
+    if (playerNameEl) playerNameEl.textContent = turn ? turn.playerName : '—';
+    if (teamNameEl) teamNameEl.textContent = turn ? turn.team.name : '—';
+    if (playerScoreEl) playerScoreEl.textContent = String(playerScore);
+    if (teamScoreEl) teamScoreEl.textContent = String(teamScore);
+    if (correctCountEl) correctCountEl.textContent = String(gameState.correctWords.length);
+    if (skippedCountEl) skippedCountEl.textContent = String(gameState.skippedWordsList.length);
+
+    renderFlexibleTurnWordsList(
+        'ft-turn-correct-words',
+        gameState.correctWords,
+        'Нет отгаданных слов',
+        'correct',
+        'correct'
+    );
+    renderFlexibleTurnWordsList(
+        'ft-turn-skipped-words',
+        gameState.skippedWordsList,
+        'Нет неугаданных слов',
+        'skipped',
+        'skipped'
+    );
+    updateFlexibleMatchScreen();
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function showFlexiblePlayerTurnResults() {
+    initFlexibleTurnResultsWordEdit();
+    refreshFlexiblePlayerTurnResultsUI();
+    showScreen('flexible-turn-results');
+}
+
+function confirmFlexibleTurnContinue() {
     flexibleTournamentState.flexibleTurnIndex = (flexibleTournamentState.flexibleTurnIndex || 0) + 1;
-
     updateFlexibleMatchScreen();
     updateFlexiblePlayerInfo();
     showScreen('flexible-tournament-match');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function endFlexiblePlayerTurn() {
+    const turn = getFlexibleCurrentTurn();
+    if (!turn) {
+        showScreen('flexible-tournament-match');
+        return;
+    }
+    recordFlexiblePlayerTurnResult();
+    confirmFlexibleTurnContinue();
 }
 
 function endFlexibleRoundWithConfirm() {
