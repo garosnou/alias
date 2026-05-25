@@ -2704,14 +2704,17 @@ function callFlexibleTeams() {
         }
     }
     flexibleTournamentState.pendingRoundTeamIndices = picks.slice();
+    const circleCount = getFlexibleRoundCircleCountForIndices(picks);
     const host = document.getElementById('ft-call-teams');
     if (host) {
         host.innerHTML = picks.map(i => {
             const t = flexibleTournamentState.teams[i];
+            const playing = getFlexibleRoundRosterPlayersForTeam(t, circleCount);
+            const playersLine = playing.map(p => escapeHtmlFlexible(p)).join(', ');
             return `
                 <div class="ft-call-card">
-                    <h3>${t.name}</h3>
-                    <p>${t.players.join(', ')}</p>
+                    <h3>${escapeHtmlFlexible(t.name)}</h3>
+                    <p>${playersLine}</p>
                 </div>
             `;
         }).join('');
@@ -2744,27 +2747,42 @@ function startFlexibleRoundFromCall() {
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
-function getFlexibleRoundMaxPlayers() {
-    const idxs = flexibleTournamentState.roundTeamIndices;
-    if (!idxs || !idxs.length) return 0;
+function getFlexibleRoundMaxPlayersForIndices(teamIndices) {
+    if (!teamIndices || !teamIndices.length) return 0;
     let m = 0;
-    for (let i = 0; i < idxs.length; i++) {
-        const t = flexibleTournamentState.teams[idxs[i]];
+    for (let i = 0; i < teamIndices.length; i++) {
+        const t = flexibleTournamentState.teams[teamIndices[i]];
         const n = t && t.players ? t.players.length : 0;
         if (n > m) m = n;
     }
     return m;
 }
 
+function getFlexibleRoundMaxPlayers() {
+    return getFlexibleRoundMaxPlayersForIndices(flexibleTournamentState.roundTeamIndices);
+}
+
 /** Число кругов в раунде: явное из настроек или по самой большой команде */
-function getFlexibleRoundCircleCount() {
-    const natural = getFlexibleRoundMaxPlayers();
+function getFlexibleRoundCircleCountForIndices(teamIndices) {
+    const natural = getFlexibleRoundMaxPlayersForIndices(teamIndices);
     if (natural < 1) return 0;
     const raw = flexibleTournamentState.roundCirclesOverride;
     if (raw == null || raw === '') return natural;
     const c = typeof raw === 'number' ? raw : parseInt(String(raw).trim(), 10);
     if (Number.isNaN(c) || c < 1) return natural;
     return Math.min(Math.max(c, 1), 50);
+}
+
+function getFlexibleRoundCircleCount() {
+    return getFlexibleRoundCircleCountForIndices(flexibleTournamentState.roundTeamIndices);
+}
+
+/** Игроки команды, которые выйдут в раунде при заданном числе кругов */
+function getFlexibleRoundRosterPlayersForTeam(team, circleCount) {
+    if (!team || !team.players || !team.players.length || circleCount < 1) return [];
+    const n = team.players.length;
+    if (circleCount >= n) return team.players.slice();
+    return team.players.slice(0, circleCount);
 }
 
 function getFlexibleRoundTotalTurns() {
@@ -2823,11 +2841,13 @@ function updateFlexibleMatchScreen() {
         return;
     }
     const scores = flexibleTournamentState.roundScores || [];
+    const turn = getFlexibleCurrentTurn();
     const pills = idxs.map((ti, i) => {
         const t = flexibleTournamentState.teams[ti];
         const sc = scores[i] != null ? scores[i] : 0;
+        const activeCard = turn && turn.slot === i ? ' host-ft-card--active' : '';
         return `
-            <div class="host-ft-score-card">
+            <div class="host-ft-score-card${activeCard}">
                 <span class="host-ft-card-name">${t ? escapeHtmlFlexible(t.name) : '—'}</span>
                 <strong class="host-ft-card-num" id="ft-score-${i}">${sc}</strong>
             </div>
@@ -2892,6 +2912,7 @@ function updateFlexiblePlayerInfo() {
         <p><strong>${circleLabel}:</strong> ${turn.circle} из ${turn.circleMax} · <strong>Ход в раунде:</strong> ${turn.turnInRound} из ${turn.turnMax}</p>
         ${posLine}
     `;
+    updateFlexibleMatchScreen();
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 

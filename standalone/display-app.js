@@ -398,9 +398,18 @@
                 var scoresEl = document.getElementById('display-ft-match-scores');
                 if (scoresEl) {
                     scoresEl.textContent = '';
-                    (twBoard.matchScores || []).forEach(function (row) {
+                    (twBoard.matchScores || []).forEach(function (row, idx) {
                         var pill = document.createElement('div');
-                        pill.className = 'display-ft-score-pill';
+                        var isActive =
+                            !twBoard.flexibleRoundComplete &&
+                            ((typeof twBoard.flexibleNextTeamSlot === 'number' &&
+                                twBoard.flexibleNextTeamSlot >= 0 &&
+                                idx === twBoard.flexibleNextTeamSlot) ||
+                                (twBoard.flexibleNextTeam &&
+                                    row.name &&
+                                    row.name === twBoard.flexibleNextTeam));
+                        pill.className =
+                            'display-ft-score-pill' + (isActive ? ' display-ft-score-pill--active' : '');
                         var nm = document.createElement('span');
                         nm.className = 'display-ft-score-name';
                         nm.textContent = row.name || '';

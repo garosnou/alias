@@ -366,6 +366,7 @@
                 matchInfo: safeText(document.getElementById('ft-match-info')),
                 flexibleNextTeam: ftTurnBoard && ftTurnBoard.team ? ftTurnBoard.team.name : '',
                 flexibleNextPlayer: ftTurnBoard ? ftTurnBoard.playerName : '',
+                flexibleNextTeamSlot: ftTurnBoard && typeof ftTurnBoard.slot === 'number' ? ftTurnBoard.slot : -1,
                 flexibleRoundComplete: ftRoundDone
             };
         } else if (screenId === 'game-screen') {
