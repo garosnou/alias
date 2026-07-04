@@ -260,6 +260,34 @@ body.standalone-host .container {
     color: rgba(255,255,255,0.95);
 }
 
+.game-banner-settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.game-banner-preview {
+    margin: 0.75rem 0;
+    padding: 0.5rem;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    max-width: min(100%, 520px);
+}
+
+.game-banner-preview.hidden {
+    display: none;
+}
+
+.game-banner-preview img {
+    display: block;
+    width: 100%;
+    max-height: 120px;
+    object-fit: contain;
+    object-position: center bottom;
+}
+
 /* Правила */
 .rules-content {
     background: rgba(255,255,255,0.1);

@@ -88,6 +88,26 @@
                     <option value="cities">Города</option>
                 </select>
             </div>
+
+            <div class="settings-group">
+                <label>Фоны экрана зала:</label>
+                <p class="hint">Положите картинки в папку <strong>bg</strong> рядом с файлами игры. Затем нажмите «Обновить фоны» и выделите все файлы в этой папке (Ctrl+A). Работает и при запуске с диска, без интернета.</p>
+                <button type="button" class="btn btn-secondary" id="hall-bg-refresh-btn">Обновить фоны</button>
+                <p class="hint hall-bg-status" id="hall-bg-status"></p>
+                <input type="file" id="hall-bg-file-input" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.jpg,.jpeg,.png,.webp,.gif" multiple hidden>
+            </div>
+
+            <div class="settings-group">
+                <label>Баннер на игровом экране зала:</label>
+                <p class="hint">Полоса внизу игрового экрана зала: на всю ширину, без отступов по бокам и снизу; высота подстраивается под пропорции картинки. Рекомендуемый размер файла — до 1&nbsp;МБ.</p>
+                <div class="game-banner-settings-actions">
+                    <button type="button" class="btn btn-secondary" id="game-banner-pick-btn">Выбрать изображение</button>
+                    <button type="button" class="btn btn-secondary" id="game-banner-clear-btn">Убрать баннер</button>
+                </div>
+                <div id="game-banner-preview" class="game-banner-preview hidden" aria-hidden="true"></div>
+                <p class="hint" id="game-banner-status"></p>
+                <input type="file" id="game-banner-file-input" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.jpg,.jpeg,.png,.webp,.gif" hidden>
+            </div>
             
             <div class="settings-buttons">
                 <button class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
@@ -564,6 +584,7 @@
         </div>
     </div>
 
+    <script src="bg/manifest.js"></script>
     <script src="words.js"></script>
     <script src="script.js"></script>
     <script src="host-bridge.js"></script>

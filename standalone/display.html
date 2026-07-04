@@ -10,6 +10,7 @@
 <body>
     <div id="display-root">
         <div id="display-idle" class="display-idle" role="status" aria-live="polite" aria-label="Подготовка турнира">
+            <div class="display-idle-bg" id="display-idle-bg" aria-hidden="true" hidden></div>
             <div class="display-idle-glow" aria-hidden="true"></div>
             <div class="display-idle-card">
                 <h1 class="display-idle-title">Подготовка турнира</h1>
@@ -23,6 +24,7 @@
         </div>
 
         <div id="display-game" class="display-game hidden">
+            <div class="display-game-main">
             <div class="display-top">
                 <div id="display-flexible-banner" class="display-flexible-banner hidden" aria-live="polite"></div>
                 <div class="display-timer-row">
@@ -36,9 +38,14 @@
             <div id="display-comp-banner" class="display-comp-banner hidden" aria-live="polite"></div>
             <div class="display-word" id="display-word">—</div>
             <div id="display-hall-scoreboard" class="display-hall-scoreboard hidden" aria-live="polite"></div>
+            </div>
         </div>
 
         <div id="display-paused" class="display-paused hidden"><span id="display-paused-text">Пауза</span></div>
+
+        <div id="display-game-banner" class="display-game-banner hidden" aria-hidden="true">
+            <img id="display-game-banner-img" alt="">
+        </div>
 
         <div id="display-tournament-wait" class="display-tournament-wait hidden">
             <p class="display-tournament-kicker">Турнир</p>
@@ -146,6 +153,7 @@
         </div>
     </div>
     <div id="display-flash" aria-hidden="true"></div>
+    <script src="bg/manifest.js"></script>
     <script src="display-app.js"></script>
 </body>
 </html>

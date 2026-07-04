@@ -4,6 +4,9 @@
 
     var flashEl = document.getElementById('display-flash');
     var idleEl = document.getElementById('display-idle');
+    var idleBgEl = document.getElementById('display-idle-bg');
+    var idleBgPool = [];
+    var idleBgEnabled = false;
     var prepEl = document.getElementById('display-prep');
     var prepNameEl = document.getElementById('display-prep-name');
     var prepCountEl = document.getElementById('display-prep-count');
@@ -15,6 +18,8 @@
     var progressFill = document.getElementById('display-progress-fill');
     var metaEl = document.getElementById('display-meta');
     var hallDock = document.getElementById('display-hall-scoreboard');
+    var gameBannerEl = document.getElementById('display-game-banner');
+    var gameBannerImg = document.getElementById('display-game-banner-img');
 
     var resultsEl = document.getElementById('display-results');
     var resultsTitle = document.getElementById('display-results-title');
@@ -33,6 +38,286 @@
     var displayTwPlayer = document.getElementById('display-tw-player');
 
     var flashTimer = null;
+    var idleBgLoadSeq = 0;
+    var lastIdleBgState = null;
+    var HALL_BG_STORAGE_KEY = 'alias-standalone-bg-files-v1';
+    var cachedGameBannerRev = 0;
+    var cachedGameBannerSrc = '';
+    var lastGameBannerPanel = null;
+    var lastGameBannerSrcApplied = '';
+    var cachedHallBannerHeightPx = 0;
+
+    function normalizeBgManifest(data) {
+        if (!data) return [];
+        var raw = Array.isArray(data) ? data : data.images || data.files || [];
+        return raw
+            .map(function (f) {
+                return String(f).trim();
+            })
+            .filter(function (name) {
+                if (!name || name === 'manifest.json') return false;
+                var base = name.replace(/\\/g, '/').split('/').pop();
+                return base && base.indexOf('..') < 0;
+            })
+            .map(function (name) {
+                return name.replace(/\\/g, '/').split('/').pop();
+            });
+    }
+
+    function idleBgAssetUrl(fileName) {
+        return 'bg/' + encodeURIComponent(fileName);
+    }
+
+    function pickRandomIdleBg() {
+        if (!idleBgEnabled || !idleBgPool.length || !idleBgEl) return;
+        var file = idleBgPool[Math.floor(Math.random() * idleBgPool.length)];
+        idleBgEl.style.backgroundImage = "url('" + idleBgAssetUrl(file) + "')";
+        idleBgEl.hidden = false;
+    }
+
+    function disableIdleBgMode() {
+        idleBgPool = [];
+        idleBgEnabled = false;
+        if (idleEl) idleEl.classList.remove('display-idle--has-bg');
+        if (idleBgEl) {
+            idleBgEl.style.backgroundImage = '';
+            idleBgEl.hidden = true;
+        }
+    }
+
+    function enableIdleBgMode(list) {
+        idleBgPool = list.slice();
+        idleBgEnabled = true;
+        if (idleEl) idleEl.classList.add('display-idle--has-bg');
+        pickRandomIdleBg();
+    }
+
+    function parseBgDirectoryListing(html) {
+        var seen = {};
+        var out = [];
+        var extRe = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
+        try {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            doc.querySelectorAll('a[href]').forEach(function (a) {
+                var href = (a.getAttribute('href') || '').trim();
+                if (!href || href === '../' || href === './' || href.charAt(0) === '?') return;
+                var name = href.replace(/\\/g, '/').split('/').pop();
+                if (!name || name === '..' || name === '.' || name === 'manifest.json') return;
+                if (!extRe.test(name)) return;
+                if (seen[name]) return;
+                seen[name] = true;
+                out.push(name);
+            });
+        } catch (e) {}
+        return out.sort(function (a, b) {
+            return a.localeCompare(b, 'ru');
+        });
+    }
+
+    function fetchBgListFromDirectory() {
+        if (typeof fetch !== 'function') {
+            return Promise.reject(new Error('no fetch'));
+        }
+        return fetch('bg/?_=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) {
+                if (!r.ok) throw new Error('no dir');
+                return r.text();
+            })
+            .then(function (html) {
+                var list = parseBgDirectoryListing(html);
+                if (!list.length) throw new Error('empty dir');
+                return list;
+            });
+    }
+
+    function collectBgImageList(state) {
+        var seen = {};
+        var out = [];
+        function add(name) {
+            var base = String(name || '')
+                .trim()
+                .replace(/\\/g, '/')
+                .split('/')
+                .pop();
+            if (!base || base === 'manifest.json' || base === 'manifest.js' || seen[base]) return;
+            seen[base] = true;
+            out.push(base);
+        }
+        if (state && state.idleBgFiles) {
+            state.idleBgFiles.forEach(add);
+        }
+        try {
+            var raw = localStorage.getItem(HALL_BG_STORAGE_KEY);
+            if (raw) JSON.parse(raw).forEach(add);
+        } catch (e) {}
+        normalizeBgManifest(window.ALIAS_BG_MANIFEST).forEach(add);
+        return out;
+    }
+
+    function loadEmbeddedBgManifest() {
+        return new Promise(function (resolve) {
+            var prev = document.getElementById('alias-bg-manifest-loader');
+            if (prev) prev.remove();
+            var s = document.createElement('script');
+            s.id = 'alias-bg-manifest-loader';
+            s.src = 'bg/manifest.js?_=' + Date.now();
+            s.onload = function () {
+                resolve(normalizeBgManifest(window.ALIAS_BG_MANIFEST));
+            };
+            s.onerror = function () {
+                resolve(normalizeBgManifest(window.ALIAS_BG_MANIFEST));
+            };
+            document.head.appendChild(s);
+        });
+    }
+
+    function fetchBgImageList(state) {
+        var local = collectBgImageList(state);
+        if (local.length) {
+            return Promise.resolve(local);
+        }
+        return loadEmbeddedBgManifest().then(function (embedded) {
+            if (embedded.length) return embedded;
+            if (typeof fetch !== 'function') {
+                return [];
+            }
+            return fetch('bg/manifest.json?_=' + Date.now(), { cache: 'no-store' })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('no manifest');
+                    return r.json();
+                })
+                .then(function (data) {
+                    var list = normalizeBgManifest(data);
+                    if (list.length) return list;
+                    return fetchBgListFromDirectory();
+                })
+                .catch(function () {
+                    return fetchBgListFromDirectory().catch(function () {
+                        return [];
+                    });
+                });
+        });
+    }
+
+    function verifyBgImageList(list) {
+        return new Promise(function (resolve) {
+            if (!list || !list.length) {
+                resolve([]);
+                return;
+            }
+            var probe = new Image();
+            probe.onload = function () {
+                resolve(list);
+            };
+            probe.onerror = function () {
+                resolve([]);
+            };
+            probe.src = idleBgAssetUrl(list[0]);
+        });
+    }
+
+    function loadIdleBackgrounds(onDone, state) {
+        var seq = ++idleBgLoadSeq;
+        fetchBgImageList(state || lastIdleBgState)
+            .then(function (list) {
+                return verifyBgImageList(list);
+            })
+            .then(function (list) {
+                if (seq !== idleBgLoadSeq) return;
+                if (!list.length) {
+                    disableIdleBgMode();
+                    return;
+                }
+                enableIdleBgMode(list);
+            })
+            .catch(function () {
+                if (seq !== idleBgLoadSeq) return;
+                disableIdleBgMode();
+            })
+            .finally(function () {
+                if (seq !== idleBgLoadSeq) return;
+                if (typeof onDone === 'function') onDone();
+            });
+    }
+
+    function showIdleScreen() {
+        idleEl.classList.remove('hidden');
+        loadIdleBackgrounds(null, lastIdleBgState);
+    }
+
+    function syncGameBannerFromState(state) {
+        if (!state) return;
+        if (state.gameBannerSrc !== undefined) {
+            cachedGameBannerSrc = state.gameBannerSrc || '';
+            cachedGameBannerRev = state.gameBannerRev || 0;
+        } else if (state.gameBannerRev !== undefined && state.gameBannerRev !== cachedGameBannerRev) {
+            cachedGameBannerSrc = '';
+            cachedGameBannerRev = state.gameBannerRev || 0;
+        }
+    }
+
+    function updateHallBannerHeight() {
+        var root = document.getElementById('display-root');
+        if (!gameBannerImg || !root || !gameBannerEl || gameBannerEl.classList.contains('hidden')) {
+            return;
+        }
+        requestAnimationFrame(function () {
+            var h = Math.round(gameBannerImg.getBoundingClientRect().height);
+            if (h <= 0 || h === cachedHallBannerHeightPx) return;
+            cachedHallBannerHeightPx = h;
+            root.style.setProperty('--hall-banner-height', h + 'px');
+        });
+    }
+
+    function applyGameBannerToDom(activePanel) {
+        if (!gameBannerEl || !gameBannerImg) return;
+        var root = document.getElementById('display-root');
+        var has = !!(cachedGameBannerSrc && cachedGameBannerRev);
+        var show = has && (activePanel === 'game' || activePanel === 'pause');
+
+        if (!show) {
+            if (lastGameBannerPanel === null) return;
+            lastGameBannerPanel = null;
+            lastGameBannerSrcApplied = '';
+            cachedHallBannerHeightPx = 0;
+            if (root) {
+                root.classList.remove('display-root--hall-banner');
+                root.style.removeProperty('--hall-banner-height');
+            }
+            if (gameEl) gameEl.classList.remove('display-game--has-banner');
+            gameBannerEl.classList.add('hidden');
+            gameBannerEl.setAttribute('aria-hidden', 'true');
+            gameBannerImg.onload = null;
+            gameBannerImg.removeAttribute('src');
+            return;
+        }
+
+        var panelChanged = lastGameBannerPanel !== activePanel;
+        var srcChanged = lastGameBannerSrcApplied !== cachedGameBannerSrc;
+        var wasHidden = gameBannerEl.classList.contains('hidden');
+
+        if (!panelChanged && !srcChanged && !wasHidden) {
+            if (gameEl) gameEl.classList.toggle('display-game--has-banner', activePanel === 'game');
+            return;
+        }
+
+        lastGameBannerPanel = activePanel;
+        lastGameBannerSrcApplied = cachedGameBannerSrc;
+
+        if (root) root.classList.add('display-root--hall-banner');
+        if (gameEl) gameEl.classList.toggle('display-game--has-banner', activePanel === 'game');
+
+        gameBannerEl.classList.remove('hidden');
+        gameBannerEl.setAttribute('aria-hidden', 'false');
+
+        gameBannerImg.onload = updateHallBannerHeight;
+        if (srcChanged || wasHidden || gameBannerImg.getAttribute('src') !== cachedGameBannerSrc) {
+            if (srcChanged || wasHidden) cachedHallBannerHeightPx = 0;
+            gameBannerImg.src = cachedGameBannerSrc;
+        } else {
+            updateHallBannerHeight();
+        }
+    }
 
     function clearFlashClass() {
         if (!flashEl) return;
@@ -463,6 +748,8 @@
     }
 
     function setViews(state) {
+        lastIdleBgState = state || null;
+        syncGameBannerFromState(state);
         var phase = state.phase || 'idle';
         var screenId = state.screenId || '';
 
@@ -482,6 +769,7 @@
             prepEl.classList.remove('hidden');
             prepNameEl.textContent = state.prepName || '';
             prepCountEl.textContent = state.prepCountdown || '';
+            applyGameBannerToDom(null);
             return;
         }
 
@@ -507,6 +795,7 @@
             }
             displayTournamentWait.classList.remove('hidden');
             renderTournamentHall(twBoard);
+            applyGameBannerToDom(null);
             return;
         }
 
@@ -524,11 +813,13 @@
                         : 'Пауза';
             }
             pausedEl.classList.remove('hidden');
+            applyGameBannerToDom('pause');
             return;
         }
 
         if (phase === 'playing' || phase === 'lobby' || phase === 'final-word') {
             gameEl.classList.remove('hidden');
+            applyGameBannerToDom('game');
             gameEl.classList.toggle('display-game--final-word', phase === 'final-word');
             wordEl.textContent = state.word || '—';
             timerEl.textContent = String(state.timeRemaining != null ? state.timeRemaining : '');
@@ -725,6 +1016,7 @@
                 resultsGeneric.classList.remove('hidden');
                 resultsBody.textContent = r.body || '';
             }
+            applyGameBannerToDom(null);
             return;
         }
 
@@ -734,7 +1026,8 @@
             hallDock.textContent = '';
         }
 
-        idleEl.classList.remove('hidden');
+        showIdleScreen();
+        applyGameBannerToDom(null);
     }
 
     var LS_KEY = 'alias-standalone-sync-v1';
@@ -788,6 +1081,8 @@
         var raw0 = localStorage.getItem(LS_KEY);
         if (raw0) applyIncoming(JSON.parse(raw0));
     } catch (e) {}
+
+    loadIdleBackgrounds();
 
     window.addEventListener('beforeunload', function () {
         if (bc) try { bc.close(); } catch (e) {}

@@ -7,6 +7,8 @@
     var LS_KEY = 'alias-standalone-sync-v1';
     var bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL) : null;
     var msgSeq = 0;
+    var lastBannerRevSentWithSrc = -1;
+    window.__aliasBannerForceSync = true;
 
     function safeText(el) {
         if (!el) return '';
@@ -437,13 +439,25 @@
                 skipsRemaining: gs && gs.maxSkipsAllowed > 0 ? gs.skipsRemaining : null,
                 maxSkipsAllowed: gs && gs.maxSkipsAllowed > 0 ? gs.maxSkipsAllowed : null,
                 awaitingCustomWordPack: !!(gs && gs.awaitingCustomWordPack),
-                finalWordPhase: !!(gs && gs.finalWordPhase)
+                finalWordPhase: !!(gs && gs.finalWordPhase),
+                idleBgFiles:
+                    typeof getHallBgFileList === 'function' ? getHallBgFileList() : []
             }
         };
     }
 
     function send(flash) {
         var p = buildState(flash);
+        var banner =
+            typeof loadGameBannerPayload === 'function'
+                ? loadGameBannerPayload()
+                : { rev: 0, src: '' };
+        p.state.gameBannerRev = banner.rev || 0;
+        if (window.__aliasBannerForceSync || lastBannerRevSentWithSrc !== (banner.rev || 0)) {
+            p.state.gameBannerSrc = banner.src || '';
+            lastBannerRevSentWithSrc = banner.rev || 0;
+            window.__aliasBannerForceSync = false;
+        }
         msgSeq++;
         var msg = {
             type: 'STATE',
@@ -475,6 +489,7 @@
             var w = window.open('display.html', 'aliasStandaloneHall', 'width=1280,height=720');
             if (w) {
                 window.__aliasStandaloneDisplayWindow = w;
+                window.__aliasBannerForceSync = true;
                 setTimeout(function () {
                     send(null);
                 }, 150);
@@ -542,7 +557,13 @@
     if (typeof origMain === 'function') {
         window.showMainMenu = function () {
             var ret = origMain.apply(this, arguments);
-            send(null);
+            if (typeof reloadHallBgManifestScript === 'function') {
+                reloadHallBgManifestScript().then(function () {
+                    send(null);
+                });
+            } else {
+                send(null);
+            }
             return ret;
         };
     }

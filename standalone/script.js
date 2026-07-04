@@ -94,6 +94,9 @@ let flexibleTournamentState = {
 };
 
 const FLEXIBLE_STORAGE_KEY = 'alias-standalone-flexible-v1';
+const HALL_BG_STORAGE_KEY = 'alias-standalone-bg-files-v1';
+const GAME_BANNER_STORAGE_KEY = 'alias-standalone-game-banner-v1';
+const GAME_BANNER_MAX_FILE_BYTES = 1200000;
 
 function readFlexibleStorageSnapshot() {
     try {
@@ -254,6 +257,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCustomPackDepletedOverlay();
     setupFlexibleTournamentFormListeners();
     initFlexibleTurnResultsWordEdit();
+    setupHallBackgroundControls();
+    setupGameBannerControls();
     updateMainInfoBanner();
 });
 
@@ -651,6 +656,196 @@ function updateSettingsUI() {
     }
     
     updateWordSourceUI();
+    updateHallBgStatus();
+    updateGameBannerStatus();
+}
+
+function loadGameBannerPayload() {
+    try {
+        const raw = localStorage.getItem(GAME_BANNER_STORAGE_KEY);
+        if (!raw) return { rev: 0, src: '', name: '' };
+        const data = JSON.parse(raw);
+        return {
+            rev: data.rev || 0,
+            src: data.src || '',
+            name: data.name || ''
+        };
+    } catch (_) {
+        return { rev: 0, src: '', name: '' };
+    }
+}
+
+function saveGameBannerPayload(payload) {
+    try {
+        localStorage.setItem(GAME_BANNER_STORAGE_KEY, JSON.stringify(payload));
+    } catch (_) {
+        showNotification('Не удалось сохранить баннер (слишком большой файл?)');
+        return false;
+    }
+    window.__aliasBannerForceSync = true;
+    return true;
+}
+
+function updateGameBannerStatus() {
+    const statusEl = document.getElementById('game-banner-status');
+    const previewEl = document.getElementById('game-banner-preview');
+    const clearBtn = document.getElementById('game-banner-clear-btn');
+    const payload = loadGameBannerPayload();
+    const has = !!(payload.src && payload.rev);
+    if (clearBtn) clearBtn.disabled = !has;
+    if (statusEl) {
+        statusEl.textContent = has
+            ? 'Баннер: ' + (payload.name || 'изображение')
+            : 'Баннер не задан.';
+    }
+    if (previewEl) {
+        previewEl.textContent = '';
+        if (has) {
+            previewEl.classList.remove('hidden');
+            previewEl.setAttribute('aria-hidden', 'false');
+            const img = document.createElement('img');
+            img.src = payload.src;
+            img.alt = 'Превью баннера';
+            previewEl.appendChild(img);
+        } else {
+            previewEl.classList.add('hidden');
+            previewEl.setAttribute('aria-hidden', 'true');
+        }
+    }
+}
+
+function pickGameBannerFile() {
+    const inp = document.getElementById('game-banner-file-input');
+    if (inp) inp.click();
+}
+
+function onGameBannerFilePicked(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+    if (!file.type || file.type.indexOf('image/') !== 0) {
+        showNotification('Выберите файл изображения');
+        return;
+    }
+    if (file.size > GAME_BANNER_MAX_FILE_BYTES) {
+        showNotification('Файл слишком большой (макс. ~1 МБ). Сожмите изображение.');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function () {
+        const payload = {
+            rev: Date.now(),
+            src: reader.result,
+            name: file.name
+        };
+        if (!saveGameBannerPayload(payload)) return;
+        updateGameBannerStatus();
+        showNotification('Баннер сохранён');
+        if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+    };
+    reader.onerror = function () {
+        showNotification('Не удалось прочитать файл');
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearGameBanner() {
+    const payload = { rev: Date.now(), src: '', name: '' };
+    if (!saveGameBannerPayload(payload)) return;
+    updateGameBannerStatus();
+    showNotification('Баннер убран');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function setupGameBannerControls() {
+    const pickBtn = document.getElementById('game-banner-pick-btn');
+    const clearBtn = document.getElementById('game-banner-clear-btn');
+    const inp = document.getElementById('game-banner-file-input');
+    if (pickBtn) pickBtn.addEventListener('click', pickGameBannerFile);
+    if (clearBtn) clearBtn.addEventListener('click', clearGameBanner);
+    if (inp) inp.addEventListener('change', onGameBannerFilePicked);
+    updateGameBannerStatus();
+}
+
+function normalizeHallBgFileName(name) {
+    const base = String(name || '')
+        .trim()
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop();
+    if (!base || base === 'manifest.json' || base === 'manifest.js' || base.indexOf('..') >= 0) return '';
+    return base;
+}
+
+function getHallBgFileList() {
+    const seen = new Set();
+    const out = [];
+    const add = (name) => {
+        const base = normalizeHallBgFileName(name);
+        if (!base || seen.has(base)) return;
+        seen.add(base);
+        out.push(base);
+    };
+    try {
+        const raw = localStorage.getItem(HALL_BG_STORAGE_KEY);
+        if (raw) JSON.parse(raw).forEach(add);
+    } catch (_) {}
+    if (Array.isArray(window.ALIAS_BG_MANIFEST)) {
+        window.ALIAS_BG_MANIFEST.forEach(add);
+    }
+    return out;
+}
+
+function updateHallBgStatus() {
+    const el = document.getElementById('hall-bg-status');
+    if (!el) return;
+    const list = getHallBgFileList();
+    if (!list.length) {
+        el.textContent =
+            'Фоны не заданы. Положите картинки в папку bg и нажмите «Обновить фоны» (или допишите имена в bg/manifest.js).';
+        return;
+    }
+    const preview = list.length > 2 ? list.slice(0, 2).join(', ') + ' и ещё ' + (list.length - 2) : list.join(', ');
+    el.textContent = 'Фонов: ' + list.length + ' — ' + preview;
+}
+
+function reloadHallBgManifestScript() {
+    return new Promise((resolve) => {
+        const prev = document.getElementById('alias-bg-manifest-loader-host');
+        if (prev) prev.remove();
+        const s = document.createElement('script');
+        s.id = 'alias-bg-manifest-loader-host';
+        s.src = 'bg/manifest.js?_=' + Date.now();
+        s.onload = () => resolve();
+        s.onerror = () => resolve();
+        document.head.appendChild(s);
+    });
+}
+
+function pickHallBackgroundFiles() {
+    const inp = document.getElementById('hall-bg-file-input');
+    if (inp) inp.click();
+}
+
+function onHallBackgroundFilesPicked(ev) {
+    const files = Array.from(ev.target.files || []);
+    const names = files.map((f) => f.name).map(normalizeHallBgFileName).filter(Boolean);
+    if (!names.length) return;
+    try {
+        localStorage.setItem(HALL_BG_STORAGE_KEY, JSON.stringify(names));
+    } catch (_) {}
+    updateHallBgStatus();
+    showNotification('Список фонов обновлён: ' + names.length);
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+    ev.target.value = '';
+}
+
+function setupHallBackgroundControls() {
+    const btn = document.getElementById('hall-bg-refresh-btn');
+    const inp = document.getElementById('hall-bg-file-input');
+    if (btn) btn.addEventListener('click', pickHallBackgroundFiles);
+    if (inp) inp.addEventListener('change', onHallBackgroundFilesPicked);
+    updateHallBgStatus();
 }
 
 function builtinCategoryName(key) {
