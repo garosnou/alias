@@ -1,0 +1,51 @@
+---
+description: Standalone-версия — структура, сборка alias.zip и скачивание с сервера
+globs: standalone/**,scripts/build-standalone-zip.js,scripts/gen-bg-manifest.js
+alwaysApply: false
+---
+
+# Standalone-версия (portable)
+
+Папка `standalone/` — автономная версия игры для запуска **с диска** (`file://`) без Node и без интернета во время игры.
+
+## Входные точки
+
+- `standalone/host.html` — панель ведущего
+- `standalone/display.html` — экран зала (лучше открывать в отдельном окне через кнопку в host)
+
+Синхронизация host ↔ display: `BroadcastChannel` + `localStorage` + `postMessage` (см. `host-bridge.js`).
+
+## Скачать последнюю версию с сервера
+
+После push в `main` на FTP выкладывается архив:
+
+**`standalone/download/alias.zip`**
+
+Относительно корня сайта на сервере — тот же путь, что в репозитории. Распаковать и запускать `host.html`.
+
+Пользователь может в любой момент скачать актуальную portable-сборку с продакшена, не клонируя репозиторий.
+
+## Сборка alias.zip
+
+Скрипт: `node scripts/build-standalone-zip.js`  
+Результат: `standalone/download/alias.zip` (содержимое `standalone/` без `download/` и `PLAN.md`).
+
+**Когда пересобирать и коммитить архив:**
+
+- после заметных правок в `standalone/` (HTML, JS, CSS, `bg/`, настройки зала);
+- перед push, если менялся код standalone — архив должен попасть в тот же коммит (CI тоже пересоберёт, но в репо должен лежать актуальный zip).
+
+CI (`.github/workflows/deploy.yml`) перед FTP всегда запускает:
+
+1. `node scripts/gen-bg-manifest.js`
+2. `node scripts/build-standalone-zip.js`
+
+## Фоны и баннер зала
+
+- Фоны «Подготовка турнира»: папка `standalone/bg/`, список в `manifest.js` (для `file://`) и `manifest.json` (для HTTP). Обновление списка: `node scripts/gen-bg-manifest.js` или «Обновить фоны» в настройках host.
+- Баннер игры: настройки host → файл сохраняется в `localStorage`, синхронизируется на display.
+
+## Ограничения
+
+- Не подключать внешние CDN в standalone — только локальные файлы.
+- Большие бинарники в `bg/` учитывать в размере `alias.zip`.

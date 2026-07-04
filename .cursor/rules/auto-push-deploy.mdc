@@ -31,5 +31,6 @@ alwaysApply: true
 ## Деплой
 
 - Триггер: push в `main` или ручной `workflow_dispatch` в Actions.
-- Перед FTP запускается `node scripts/gen-bg-manifest.js`.
+- Перед FTP: `node scripts/gen-bg-manifest.js`, затем `node scripts/build-standalone-zip.js` → `standalone/download/alias.zip`.
+- На сервере актуальная portable-версия: **`standalone/download/alias.zip`** (см. правило `standalone`).
 - Секреты FTP — только в GitHub Secrets, не в репозитории.
