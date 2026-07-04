@@ -15,6 +15,9 @@ jobs:
       - name: Generate hall background manifest
         run: node scripts/gen-bg-manifest.js
 
+      - name: Build standalone download zip
+        run: node scripts/build-standalone-zip.js
+
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
