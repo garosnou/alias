@@ -224,6 +224,33 @@
 
     function buildResultsPayload(screenId) {
         if (screenId === 'results') {
+            var pairBd = document.getElementById('pair-results-breakdown');
+            var isPair = pairBd && !pairBd.classList.contains('hidden');
+            if (isPair) {
+                return {
+                    variant: 'pair-round',
+                    title: safeText(document.getElementById('results-title')) || 'Результаты игры на пару',
+                    finalScore: safeText(document.getElementById('final-score')),
+                    correct: safeText(document.getElementById('correct-answers')),
+                    skipped: safeText(document.getElementById('skipped-words')),
+                    duration: safeText(document.getElementById('game-time-result')),
+                    category: safeText(document.getElementById('game-category-result')),
+                    pairLegs: [
+                        {
+                            label: 'Игрок 1',
+                            score: safeText(document.getElementById('pair-leg1-score')),
+                            meta: safeText(document.getElementById('pair-leg1-meta'))
+                        },
+                        {
+                            label: 'Игрок 2',
+                            score: safeText(document.getElementById('pair-leg2-score')),
+                            meta: safeText(document.getElementById('pair-leg2-meta'))
+                        }
+                    ],
+                    correctWords: wordItemsFromList('correct-words-list'),
+                    skippedWords: wordItemsFromList('skipped-words-list')
+                };
+            }
             return {
                 variant: 'round',
                 title: 'Результаты раунда',

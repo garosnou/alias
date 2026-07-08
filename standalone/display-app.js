@@ -993,12 +993,17 @@
             resultsRound.classList.add('hidden');
             resultsGeneric.classList.add('hidden');
 
-            if (r.variant === 'round') {
+            if (r.variant === 'round' || r.variant === 'pair-round') {
                 resultsRound.classList.remove('hidden');
                 drFinal.textContent = r.finalScore != null ? String(r.finalScore) : '0';
                 drCorrectN.textContent = r.correct != null ? String(r.correct) : '0';
                 drSkippedN.textContent = r.skipped != null ? String(r.skipped) : '0';
                 var metaParts = [];
+                if (r.variant === 'pair-round' && r.pairLegs && r.pairLegs.length) {
+                    r.pairLegs.forEach(function (pl) {
+                        if (pl && pl.label) metaParts.push(pl.label + ': ' + (pl.score != null ? pl.score : '0'));
+                    });
+                }
                 if (r.duration) metaParts.push('Время: ' + r.duration);
                 if (r.category) metaParts.push('Категория: ' + r.category);
                 resultsMeta.textContent = metaParts.join(' · ');

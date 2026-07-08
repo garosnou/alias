@@ -22,7 +22,8 @@
             </div>
             
             <div class="menu-buttons">
-                <button class="btn btn-primary" onclick="startGame()">Начать игру</button>
+                <button class="btn btn-primary" onclick="startSingleGame()">Одиночная игра</button>
+                <button class="btn btn-primary" onclick="startPairGame()">Игра на пару</button>
                 <button class="btn btn-primary" onclick="showTournamentSetup()">Турнирный режим</button>
                 <button class="btn btn-primary" onclick="showFlexibleTournamentFromMenu()">Гибкий турнир</button>
                 <button class="btn btn-primary" onclick="showCompetitiveSetup()">Соревновательный режим</button>
@@ -138,6 +139,12 @@
                     <li><strong>ПОГОДА</strong> - "То, что показывает термометр"</li>
                 </ul>
                 
+                <h3>Одиночная игра и игра на пару</h3>
+                <ul>
+                    <li><strong>Одиночная игра</strong> — один раунд по времени из настроек</li>
+                    <li><strong>Игра на пару</strong> — два раунда подряд: сначала один объясняет, затем меняются ролями; общий счёт — сумма двух раундов</li>
+                </ul>
+
                 <h3>Подсчет очков:</h3>
                 <ul>
                     <li>Правильный ответ: +1 очко</li>
@@ -159,7 +166,8 @@
                     <div class="prep-countdown" id="prep-countdown">3</div>
                 </div>
             </div>
-            <div class="game-header">
+                <div class="game-header">
+                <div id="pair-leg-badge" class="pair-leg-badge hidden" aria-live="polite"></div>
                 <div class="timer-container">
                     <div class="timer" id="timer">60</div>
                     <div class="progress-bar">
@@ -259,7 +267,25 @@
     <!-- Результаты -->
     <div id="results" class="screen">
         <div class="container">
-            <h2>Результаты игры</h2>
+            <h2 id="results-title">Результаты игры</h2>
+
+            <div id="pair-results-breakdown" class="pair-results-breakdown hidden" aria-live="polite">
+                <h3 class="pair-results-h3">Счёт по раундам</h3>
+                <div class="pair-leg-cards">
+                    <div class="pair-leg-card">
+                        <div class="pair-leg-label">Игрок 1</div>
+                        <div class="pair-leg-score" id="pair-leg1-score">0</div>
+                        <div class="pair-leg-meta" id="pair-leg1-meta"></div>
+                    </div>
+                    <div class="pair-leg-plus" aria-hidden="true">+</div>
+                    <div class="pair-leg-card">
+                        <div class="pair-leg-label">Игрок 2</div>
+                        <div class="pair-leg-score" id="pair-leg2-score">0</div>
+                        <div class="pair-leg-meta" id="pair-leg2-meta"></div>
+                    </div>
+                </div>
+                <p class="pair-results-hint">Общий счёт пары — сумма двух раундов</p>
+            </div>
             
             <div class="results-stats">
                 <div class="stat-card">
@@ -282,7 +308,7 @@
             </div>
             
             <div class="results-buttons">
-                <button class="btn btn-primary" onclick="newGame()">Новый раунд</button>
+                <button class="btn btn-primary" id="results-new-game-btn" onclick="newGame()">Новый раунд</button>
                 <button class="btn btn-secondary" onclick="showMainMenu()">Главное меню</button>
             </div>
             

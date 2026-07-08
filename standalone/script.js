@@ -68,6 +68,13 @@ let competitiveState = {
     prepTimer: null
 };
 
+/** Обычная игра на пару: два раунда подряд, общий счёт */
+let pairGameState = {
+    mode: null, // null | 'pair'
+    currentLeg: 0, // 0 | 1
+    legs: [null, null]
+};
+
 /** Гибкий турнир: пул команд, раунды по 1–16 команд */
 const FLEXIBLE_MAX_TEAMS_IN_ROUND = 16;
 
@@ -948,10 +955,15 @@ function showMainMenu() {
     closeCustomWordPackDepletedOverlay();
     competitiveState.isCompetitiveMode = false;
     flexibleTournamentState.isFlexibleMode = false;
+    pairGameState.mode = null;
+    pairGameState.currentLeg = 0;
+    pairGameState.legs = [null, null];
     const sb = document.getElementById('competitive-scoreboard');
     if (sb) sb.style.display = 'none';
     const prep = document.getElementById('competitive-prep');
     if (prep) prep.style.display = 'none';
+    const pairBadge = document.getElementById('pair-leg-badge');
+    if (pairBadge) pairBadge.classList.add('hidden');
     showScreen('main-menu');
 }
 function showSettings() {
@@ -960,6 +972,146 @@ function showSettings() {
     showScreen('settings');
 }
 function showRules() { showScreen('rules'); }
+
+function startSingleGame() {
+    pairGameState.mode = null;
+    pairGameState.currentLeg = 0;
+    pairGameState.legs = [null, null];
+    startGame();
+}
+
+function startPairGame() {
+    pairGameState.mode = 'pair';
+    pairGameState.currentLeg = 0;
+    pairGameState.legs = [null, null];
+    startGame();
+}
+
+function snapshotPairLegFromGameState() {
+    return {
+        score: Math.round(gameState.score),
+        correctAnswers: gameState.correctAnswers,
+        skippedWords: gameState.skippedWords,
+        correctWords: (gameState.correctWords || []).slice(),
+        skippedWordsList: (gameState.skippedWordsList || []).slice(),
+        duration: Math.round((Date.now() - (gameState.startTime || Date.now())) / 1000)
+    };
+}
+
+function stopGameTimers() {
+    if (gameState && gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+        gameState.timerInterval = null;
+    }
+    if (competitiveState && competitiveState.prepTimer) {
+        clearInterval(competitiveState.prepTimer);
+        competitiveState.prepTimer = null;
+    }
+}
+
+function finalizePairLegOrShowResults() {
+    const legSnapshot = snapshotPairLegFromGameState();
+    gameState.awaitingCustomWordPack = false;
+    gameState.finalWordPhase = false;
+    gameState.isPlaying = false;
+    gameState.isPaused = false;
+    stopGameTimers();
+
+    if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
+        markWordsAsUsed();
+    }
+
+    pairGameState.legs[pairGameState.currentLeg] = legSnapshot;
+
+    if (pairGameState.currentLeg === 0) {
+        pairGameState.currentLeg = 1;
+        startGame();
+        return;
+    }
+
+    showPairCombinedResults();
+}
+
+function showPairCombinedResults() {
+    const leg0 = pairGameState.legs[0] || { score: 0, correctAnswers: 0, skippedWords: 0, correctWords: [], skippedWordsList: [], duration: 0 };
+    const leg1 = pairGameState.legs[1] || { score: 0, correctAnswers: 0, skippedWords: 0, correctWords: [], skippedWordsList: [], duration: 0 };
+    const totalScore = leg0.score + leg1.score;
+    const totalCorrect = leg0.correctAnswers + leg1.correctAnswers;
+    const totalSkipped = leg0.skippedWords + leg1.skippedWords;
+    const totalDuration = leg0.duration + leg1.duration;
+
+    const titleEl = document.getElementById('results-title');
+    if (titleEl) titleEl.textContent = 'Результаты игры на пару';
+
+    const breakdown = document.getElementById('pair-results-breakdown');
+    if (breakdown) breakdown.classList.remove('hidden');
+
+    const leg1Score = document.getElementById('pair-leg1-score');
+    const leg2Score = document.getElementById('pair-leg2-score');
+    const leg1Meta = document.getElementById('pair-leg1-meta');
+    const leg2Meta = document.getElementById('pair-leg2-meta');
+    if (leg1Score) leg1Score.textContent = String(leg0.score);
+    if (leg2Score) leg2Score.textContent = String(leg1.score);
+    if (leg1Meta) leg1Meta.textContent = `${leg0.correctAnswers} угадано · ${leg0.duration} с`;
+    if (leg2Meta) leg2Meta.textContent = `${leg1.correctAnswers} угадано · ${leg1.duration} с`;
+
+    document.getElementById('final-score').textContent = totalScore;
+    document.getElementById('correct-answers').textContent = totalCorrect;
+    document.getElementById('skipped-words').textContent = totalSkipped;
+    document.getElementById('game-time-result').textContent = totalDuration + ' секунд';
+    document.getElementById('game-category-result').textContent = builtinCategoryName(gameState.category);
+
+    displayPairWordsLists(leg0, leg1);
+
+    const newBtn = document.getElementById('results-new-game-btn');
+    if (newBtn) newBtn.textContent = 'Новая игра на пару';
+
+    saveGameResults(totalScore, totalCorrect, totalSkipped, totalDuration);
+
+    const pairBadge = document.getElementById('pair-leg-badge');
+    if (pairBadge) pairBadge.classList.add('hidden');
+
+    showScreen('results');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function displayPairWordsLists(leg0, leg1) {
+    const correctWordsContainer = document.getElementById('correct-words-list');
+    const skippedWordsContainer = document.getElementById('skipped-words-list');
+    const correctCount = document.getElementById('correct-count');
+    const skippedCount = document.getElementById('skipped-count');
+    const allCorrect = leg0.correctWords.concat(leg1.correctWords);
+    const allSkipped = leg0.skippedWordsList.concat(leg1.skippedWordsList);
+
+    if (correctCount) correctCount.textContent = allCorrect.length;
+    if (skippedCount) skippedCount.textContent = allSkipped.length;
+
+    const renderLegBlock = (label, words, cls) => {
+        if (!words.length) return `<p class="pair-words-leg"><strong>${label}:</strong> <span class="no-words">нет</span></p>`;
+        const tags = words.map((w) => `<span class="word-item ${cls}">${w}</span>`).join('');
+        return `<div class="pair-words-leg"><strong>${label}</strong><div class="pair-words-tags">${tags}</div></div>`;
+    };
+
+    if (correctWordsContainer) {
+        correctWordsContainer.innerHTML =
+            renderLegBlock('Игрок 1', leg0.correctWords, 'correct') +
+            renderLegBlock('Игрок 2', leg1.correctWords, 'correct');
+    }
+    if (skippedWordsContainer) {
+        skippedWordsContainer.innerHTML =
+            renderLegBlock('Игрок 1', leg0.skippedWordsList, 'skipped') +
+            renderLegBlock('Игрок 2', leg1.skippedWordsList, 'skipped');
+    }
+}
+
+function resetPairResultsUi() {
+    const titleEl = document.getElementById('results-title');
+    if (titleEl) titleEl.textContent = 'Результаты игры';
+    const breakdown = document.getElementById('pair-results-breakdown');
+    if (breakdown) breakdown.classList.add('hidden');
+    const newBtn = document.getElementById('results-new-game-btn');
+    if (newBtn) newBtn.textContent = 'Новый раунд';
+}
 
 // Начало игры
 function startGame() {
@@ -994,6 +1146,9 @@ function startGame() {
         writeFlexibleTournamentToStorage();
         category = settings.wordSource === 'builtin' ? settings.category : 'custom';
     } else if (competitiveState.isCompetitiveMode) {
+        gameTime = settings.gameTime;
+        category = settings.category;
+    } else if (pairGameState.mode === 'pair') {
         gameTime = settings.gameTime;
         category = settings.category;
     } else {
@@ -1079,13 +1234,24 @@ function startGame() {
         startCompetitivePreparation();
     } else {
         const ftTurn = flexibleTournamentState.isFlexibleMode ? getFlexibleCurrentTurn() : null;
-        const prepLabel = ftTurn ? `${ftTurn.team.name} — ${ftTurn.playerName}` : null;
-        // Универсальная подготовка перед началом раунда во всех режимах
-        startRoundPreparation(3, prepLabel, () => {
+        let prepLabel = ftTurn ? `${ftTurn.team.name} — ${ftTurn.playerName}` : null;
+        let prepOptions = null;
+        let prepSeconds = 3;
+        if (pairGameState.mode === 'pair') {
+            if (pairGameState.currentLeg === 0) {
+                prepLabel = 'Игрок 1 объясняет';
+            } else {
+                prepLabel = 'Игрок 2 объясняет';
+                prepOptions = { title: 'Смена объясняющего' };
+                prepSeconds = 5;
+            }
+        }
+        startRoundPreparation(prepSeconds, prepLabel, () => {
             startTimer();
             showCurrentWord();
-        });
+        }, prepOptions);
     }
+    updatePairLegBadge();
 }
 
 // Получение слов из выбранного источника
@@ -1132,10 +1298,13 @@ function startTimer() {
 }
 
 // Универсальная подготовка к раунду (обратный отсчет перед стартом)
-function startRoundPreparation(seconds, playerName, onComplete) {
+function startRoundPreparation(seconds, playerName, onComplete, options) {
     const prep = document.getElementById('competitive-prep');
     const nameEl = document.getElementById('prep-player-name');
     const countdownEl = document.getElementById('prep-countdown');
+    const titleEl = prep ? prep.querySelector('.prep-title') : null;
+    const defaultTitle = titleEl ? titleEl.textContent : 'Подготовка';
+    if (titleEl) titleEl.textContent = options && options.title ? options.title : 'Подготовка';
     if (nameEl) nameEl.textContent = playerName ? String(playerName) : '';
     let left = Math.max(0, parseInt(seconds, 10) || 0);
     if (countdownEl) countdownEl.textContent = String(left);
@@ -1147,6 +1316,7 @@ function startRoundPreparation(seconds, playerName, onComplete) {
     }
     if (left === 0) {
         if (prep) prep.style.display = 'none';
+        if (titleEl) titleEl.textContent = defaultTitle;
         if (typeof updateHostPlayingScoreboard === 'function') updateHostPlayingScoreboard();
         if (typeof onComplete === 'function') onComplete();
         if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
@@ -1160,6 +1330,7 @@ function startRoundPreparation(seconds, playerName, onComplete) {
             clearInterval(competitiveState.prepTimer);
             competitiveState.prepTimer = null;
             if (prep) prep.style.display = 'none';
+            if (titleEl) titleEl.textContent = defaultTitle;
             if (typeof updateHostPlayingScoreboard === 'function') updateHostPlayingScoreboard();
             if (typeof onComplete === 'function') onComplete();
         }
@@ -1356,6 +1527,10 @@ function endGame() {
         finalizeFlexibleTurnFromGame();
         return;
     }
+    if (gameState && gameState.isPlaying && pairGameState.mode === 'pair') {
+        finalizePairLegOrShowResults();
+        return;
+    }
     if (gameState) {
         gameState.awaitingCustomWordPack = false;
         gameState.finalWordPhase = false;
@@ -1386,6 +1561,8 @@ function endGame() {
     const gameDuration = Math.round((Date.now() - gameState.startTime) / 1000);
     document.getElementById('game-time-result').textContent = gameDuration + ' секунд';
     document.getElementById('game-category-result').textContent = builtinCategoryName(gameState.category);
+
+    resetPairResultsUi();
     
     // Отображаем списки отгаданных и пропущенных слов
     displayWordsLists();
@@ -2167,10 +2344,25 @@ function updateMainInfoBanner() {
 }
 
 // Новый раунд
-function newGame() { startGame(); }
+function newGame() {
+    if (pairGameState.mode === 'pair') startPairGame();
+    else startSingleGame();
+}
+
+function updatePairLegBadge() {
+    const badge = document.getElementById('pair-leg-badge');
+    if (!badge) return;
+    if (pairGameState.mode === 'pair' && gameState.isPlaying) {
+        badge.textContent = `Раунд ${pairGameState.currentLeg + 1} из 2`;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
 
 // Обновление игрового UI
 function updateGameUI() {
+    updatePairLegBadge();
     const scoreEl = document.getElementById('current-score');
     if (scoreEl) scoreEl.textContent = Math.round(gameState.score);
     const skipBtn = document.getElementById('skip-btn');
@@ -2523,6 +2715,8 @@ async function parseWordFile(file) {
 
 // Глобальные функции для HTML
 window.startGame = startGame;
+window.startSingleGame = startSingleGame;
+window.startPairGame = startPairGame;
 window.showSettings = showSettings;
 window.showRules = showRules;
 window.showMainMenu = showMainMenu;
