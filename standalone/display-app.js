@@ -798,7 +798,7 @@
                 pairSwapEl.classList.remove('hidden');
                 var ps = state.pairSwap || {};
                 if (pairSwapPlayerEl) {
-                    pairSwapPlayerEl.textContent = ps.nextPlayerLabel || 'Игрок 2';
+                    pairSwapPlayerEl.textContent = ps.nextPlayerLabel || 'Второй Игрок';
                 }
                 if (pairSwapHintEl) {
                     pairSwapHintEl.textContent = state.themeName
@@ -809,8 +809,8 @@
                     var sc = ps.leg1Score != null ? ps.leg1Score : 0;
                     var meta = ps.leg1Meta || '';
                     pairSwapScoreEl.textContent = meta
-                        ? 'Игрок 1: ' + sc + ' очков · ' + meta
-                        : 'Игрок 1: ' + sc + ' очков';
+                        ? 'Первый Игрок: ' + sc + ' очков · ' + meta
+                        : 'Первый Игрок: ' + sc + ' очков';
                 }
             }
             applyGameBannerToDom(null);

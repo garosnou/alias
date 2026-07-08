@@ -23,7 +23,7 @@
             
             <div class="menu-buttons">
                 <button class="btn btn-primary" onclick="startSingleGame()">Одиночная игра</button>
-                <button class="btn btn-primary" onclick="startPairGame()">Игра на пару</button>
+                <button class="btn btn-primary" onclick="startPairGame()">Игра на двоих</button>
                 <button class="btn btn-primary" onclick="showTournamentSetup()">Турнирный режим</button>
                 <button class="btn btn-primary" onclick="showFlexibleTournamentFromMenu()">Гибкий турнир</button>
                 <button class="btn btn-primary" onclick="showCompetitiveSetup()">Соревновательный режим</button>
@@ -176,10 +176,10 @@
                     <li><strong>По темам</strong> — каждый файл — отдельная тема; перед игрой выбираете тему</li>
                 </ul>
 
-                <h3>Одиночная игра и игра на пару</h3>
+                <h3>Одиночная игра и игра на двоих</h3>
                 <ul>
                     <li><strong>Одиночная игра</strong> — один раунд по времени из настроек</li>
-                    <li><strong>Игра на пару</strong> — два раунда подряд: сначала один объясняет, затем меняются ролями; общий счёт — сумма двух раундов</li>
+                    <li><strong>Игра на двоих</strong> — два раунда подряд: сначала один объясняет, затем меняются ролями; общий счёт — сумма двух раундов</li>
                 </ul>
 
                 <h3>Подсчет очков:</h3>
@@ -193,17 +193,17 @@
         </div>
     </div>
 
-    <!-- Пауза между раундами игры на пару -->
+    <!-- Пауза между раундами игры на двоих -->
     <div id="pair-swap-screen" class="screen">
         <div class="container pair-swap-shell">
             <h2>Смена объясняющего</h2>
-            <p class="hint pair-swap-lead">Игрок 1 завершил раунд. Когда Игрок 2 готов — нажмите кнопку ниже (на экране зала тоже отображается ожидание).</p>
+            <p class="hint pair-swap-lead">Первый Игрок завершил раунд. Когда Второй Игрок готов — нажмите кнопку ниже (на экране зала тоже отображается ожидание).</p>
             <div class="pair-swap-summary">
-                <p><strong>Игрок 1:</strong> <span id="pair-swap-leg1-score">0</span> очков</p>
+                <p><strong>Первый Игрок:</strong> <span id="pair-swap-leg1-score">0</span> очков</p>
                 <p id="pair-swap-leg1-meta" class="pair-swap-meta"></p>
             </div>
             <div class="pair-swap-actions">
-                <button type="button" class="btn btn-primary" onclick="startPairLeg2()">Игрок 2 готов — начать</button>
+                <button type="button" class="btn btn-primary" onclick="startPairLeg2()">Второй Игрок готов — начать</button>
                 <button type="button" class="btn btn-secondary" onclick="endPairGameEarly()">Завершить игру</button>
             </div>
         </div>
@@ -326,13 +326,13 @@
                 <h3 class="pair-results-h3">Счёт по раундам</h3>
                 <div class="pair-leg-cards">
                     <div class="pair-leg-card">
-                        <div class="pair-leg-label">Игрок 1</div>
+                        <div class="pair-leg-label">Первый Игрок</div>
                         <div class="pair-leg-score" id="pair-leg1-score">0</div>
                         <div class="pair-leg-meta" id="pair-leg1-meta"></div>
                     </div>
                     <div class="pair-leg-plus" aria-hidden="true">+</div>
                     <div class="pair-leg-card">
-                        <div class="pair-leg-label">Игрок 2</div>
+                        <div class="pair-leg-label">Второй Игрок</div>
                         <div class="pair-leg-score" id="pair-leg2-score">0</div>
                         <div class="pair-leg-meta" id="pair-leg2-meta"></div>
                     </div>

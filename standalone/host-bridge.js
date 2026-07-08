@@ -229,7 +229,7 @@
             if (isPair) {
                 return {
                     variant: 'pair-round',
-                    title: safeText(document.getElementById('results-title')) || 'Результаты игры на пару',
+                    title: safeText(document.getElementById('results-title')) || 'Результаты игры на двоих',
                     finalScore: safeText(document.getElementById('final-score')),
                     correct: safeText(document.getElementById('correct-answers')),
                     skipped: safeText(document.getElementById('skipped-words')),
@@ -237,12 +237,12 @@
                     category: safeText(document.getElementById('game-category-result')),
                     pairLegs: [
                         {
-                            label: 'Игрок 1',
+                            label: 'Первый Игрок',
                             score: safeText(document.getElementById('pair-leg1-score')),
                             meta: safeText(document.getElementById('pair-leg1-meta'))
                         },
                         {
-                            label: 'Игрок 2',
+                            label: 'Второй Игрок',
                             score: safeText(document.getElementById('pair-leg2-score')),
                             meta: safeText(document.getElementById('pair-leg2-meta'))
                         }
@@ -464,11 +464,11 @@
                 pairGame = {
                     leg: legNum,
                     totalLegs: 2,
-                    playerLabel: legNum === 1 ? 'Игрок 1' : 'Игрок 2'
+                    playerLabel: legNum === 1 ? 'Первый Игрок' : 'Второй Игрок'
                 };
                 if (screenId === 'pair-swap-screen' && pgs.legs && pgs.legs[0]) {
                     pairSwap = {
-                        nextPlayerLabel: 'Игрок 2',
+                        nextPlayerLabel: 'Второй Игрок',
                         leg1Score: pgs.legs[0].score != null ? pgs.legs[0].score : 0,
                         leg1Meta:
                             (pgs.legs[0].correctAnswers != null ? pgs.legs[0].correctAnswers : 0) +

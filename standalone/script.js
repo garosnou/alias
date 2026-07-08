@@ -511,7 +511,7 @@ function showThemePicker() {
     const title = document.getElementById('theme-picker-title');
     const lead = document.getElementById('theme-picker-lead');
     if (title) {
-        title.textContent = pendingGameStart === 'pair' ? 'Выберите тему для игры на пару' : 'Выберите тему';
+        title.textContent = pendingGameStart === 'pair' ? 'Выберите тему для игры на двоих' : 'Выберите тему';
     }
     if (lead) {
         lead.textContent =
@@ -1418,7 +1418,7 @@ function showPairCombinedResults() {
     const totalDuration = leg0.duration + leg1.duration;
 
     const titleEl = document.getElementById('results-title');
-    if (titleEl) titleEl.textContent = 'Результаты игры на пару';
+    if (titleEl) titleEl.textContent = 'Результаты игры на двоих';
 
     const breakdown = document.getElementById('pair-results-breakdown');
     if (breakdown) breakdown.classList.remove('hidden');
@@ -1444,7 +1444,7 @@ function showPairCombinedResults() {
     displayPairWordsLists(leg0, leg1);
 
     const newBtn = document.getElementById('results-new-game-btn');
-    if (newBtn) newBtn.textContent = 'Новая игра на пару';
+    if (newBtn) newBtn.textContent = 'Новая игра на двоих';
 
     saveGameResults(totalScore, totalCorrect, totalSkipped, totalDuration);
 
@@ -1477,13 +1477,13 @@ function displayPairWordsLists(leg0, leg1) {
 
     if (correctWordsContainer) {
         correctWordsContainer.innerHTML =
-            renderLegBlock('Игрок 1', leg0.correctWords, 'correct') +
-            renderLegBlock('Игрок 2', leg1.correctWords, 'correct');
+            renderLegBlock('Первый Игрок', leg0.correctWords, 'correct') +
+            renderLegBlock('Второй Игрок', leg1.correctWords, 'correct');
     }
     if (skippedWordsContainer) {
         skippedWordsContainer.innerHTML =
-            renderLegBlock('Игрок 1', leg0.skippedWordsList, 'skipped') +
-            renderLegBlock('Игрок 2', leg1.skippedWordsList, 'skipped');
+            renderLegBlock('Первый Игрок', leg0.skippedWordsList, 'skipped') +
+            renderLegBlock('Второй Игрок', leg1.skippedWordsList, 'skipped');
     }
 }
 
@@ -1653,9 +1653,9 @@ function startGame() {
         let prepSeconds = 3;
         if (pairGameState.mode === 'pair') {
             if (pairGameState.currentLeg === 0) {
-                prepLabel = 'Игрок 1 объясняет';
+                prepLabel = 'Первый Игрок объясняет';
             } else {
-                prepLabel = 'Игрок 2 объясняет';
+                prepLabel = 'Второй Игрок объясняет';
                 prepOptions = { title: 'Смена объясняющего' };
                 prepSeconds = 5;
             }
