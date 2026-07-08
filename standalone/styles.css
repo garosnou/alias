@@ -581,19 +581,47 @@ body.standalone-host .container {
 }
 
 .pair-words-leg {
-    margin: 0 0 0.85rem;
+    margin: 0;
+    padding: 0.75rem 0;
     text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .pair-words-leg:last-child {
-    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.pair-words-leg:first-child {
+    padding-top: 0;
+}
+
+.pair-words-leg-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: 0.02em;
+    margin-bottom: 0.45rem;
 }
 
 .pair-words-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
-    margin-top: 0.35rem;
+    justify-content: flex-start;
+}
+
+.pair-words-tags .no-words {
+    padding: 0.15rem 0;
+}
+
+.words-container.words-container--pair {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    min-height: 0;
 }
 
 .results-stats {

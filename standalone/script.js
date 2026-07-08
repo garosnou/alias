@@ -1086,10 +1086,13 @@ function displayPairWordsLists(leg0, leg1) {
     if (correctCount) correctCount.textContent = allCorrect.length;
     if (skippedCount) skippedCount.textContent = allSkipped.length;
 
+    setPairWordsContainersMode(true);
+
     const renderLegBlock = (label, words, cls) => {
-        if (!words.length) return `<p class="pair-words-leg"><strong>${label}:</strong> <span class="no-words">нет</span></p>`;
-        const tags = words.map((w) => `<span class="word-item ${cls}">${w}</span>`).join('');
-        return `<div class="pair-words-leg"><strong>${label}</strong><div class="pair-words-tags">${tags}</div></div>`;
+        const tags = words.length
+            ? words.map((w) => `<span class="word-item ${cls}">${w}</span>`).join('')
+            : '<span class="no-words">нет</span>';
+        return `<div class="pair-words-leg"><div class="pair-words-leg-label">${label}</div><div class="pair-words-tags">${tags}</div></div>`;
     };
 
     if (correctWordsContainer) {
@@ -1104,6 +1107,13 @@ function displayPairWordsLists(leg0, leg1) {
     }
 }
 
+function setPairWordsContainersMode(isPair) {
+    ['correct-words-list', 'skipped-words-list'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('words-container--pair', isPair);
+    });
+}
+
 function resetPairResultsUi() {
     const titleEl = document.getElementById('results-title');
     if (titleEl) titleEl.textContent = 'Результаты игры';
@@ -1111,6 +1121,7 @@ function resetPairResultsUi() {
     if (breakdown) breakdown.classList.add('hidden');
     const newBtn = document.getElementById('results-new-game-btn');
     if (newBtn) newBtn.textContent = 'Новый раунд';
+    setPairWordsContainersMode(false);
 }
 
 // Начало игры
@@ -2598,6 +2609,7 @@ function setupKeyboardControls() {
 
 // Отображение списков отгаданных и пропущенных слов
 function displayWordsLists() {
+    setPairWordsContainersMode(false);
     const correctWordsContainer = document.getElementById('correct-words-list');
     const skippedWordsContainer = document.getElementById('skipped-words-list');
     const correctCount = document.getElementById('correct-count');
