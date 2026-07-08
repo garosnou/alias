@@ -48,8 +48,11 @@
                 <div class="radio-group">
                     <label><input type="radio" name="word-source" id="source-builtin" value="builtin" checked> Встроенные</label>
                     <label><input type="radio" name="word-source" id="source-custom" value="custom"> Пользовательские</label>
+                    <label><input type="radio" name="word-source" id="source-themes" value="themes"> По темам</label>
                 </div>
-                <p class="hint">Пользовательские слова: один или несколько файлов <code>.txt</code> (по одному слову в строке). Можно выбрать сразу несколько файлов.</p>
+                <p class="hint" id="word-source-hint-builtin">Встроенные слова — категории из списка ниже.</p>
+                <p class="hint hidden" id="word-source-hint-custom">Пользовательские слова: один или несколько файлов <code>.txt</code> (по одному слову в строке). Все файлы объединяются в один пакет.</p>
+                <p class="hint hidden" id="word-source-hint-themes">По темам: каждый файл <code>.txt</code> — отдельная тема. Перед игрой выберите тему из загруженных.</p>
             </div>
 
             <div class="settings-group" id="custom-pack-uploader" style="display:none;">
@@ -64,6 +67,19 @@
                 <p class="hint custom-pack-export-hint">«Загрузить» — заменить все пакеты и сбросить прогресс по словам. «Добавить» — дописать файлы к уже загруженным, прогресс сохраняется.</p>
                 <ul id="custom-pack-list" class="custom-pack-list hidden" aria-label="Загруженные пакеты"></ul>
                 <div class="pack-status" id="custom-pack-status">Пакеты не загружены</div>
+            </div>
+
+            <div class="settings-group" id="themes-pack-uploader" style="display:none;">
+                <label>Темы игры (файлы со словами):</label>
+                <input type="file" id="theme-pack-input" accept=".txt" multiple>
+                <div class="uploader-buttons">
+                    <button type="button" class="btn btn-primary" id="import-themes-btn">Загрузить темы</button>
+                    <button type="button" class="btn btn-secondary" id="append-themes-btn">Добавить темы</button>
+                    <button type="button" class="btn btn-secondary" id="clear-themes-btn">Очистить всё</button>
+                </div>
+                <p class="hint custom-pack-export-hint">Каждый файл — отдельная тема (название берётся из имени файла). «Загрузить» заменяет все темы и сбрасывает прогресс. «Добавить» — дописывает новые темы.</p>
+                <ul id="themes-pack-list" class="custom-pack-list hidden" aria-label="Загруженные темы"></ul>
+                <div class="pack-status" id="themes-pack-status">Темы не загружены</div>
             </div>
             
             <div class="settings-group">
@@ -117,6 +133,20 @@
         </div>
     </div>
 
+    <!-- Выбор темы перед игрой -->
+    <div id="theme-picker" class="screen">
+        <div class="container">
+            <h2 id="theme-picker-title">Выберите тему</h2>
+            <p class="hint theme-picker-lead" id="theme-picker-lead">Нажмите на тему, чтобы начать игру.</p>
+            <div id="theme-picker-list" class="theme-picker-list" role="list"></div>
+            <p class="hint hidden" id="theme-picker-empty">Темы не загружены. Добавьте файлы <code>.txt</code> в настройках.</p>
+            <div class="theme-picker-actions">
+                <button type="button" class="btn btn-secondary" onclick="cancelThemePicker()">Назад</button>
+                <button type="button" class="btn btn-secondary" onclick="showSettings()">Настройки</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Правила -->
     <div id="rules" class="screen">
         <div class="container">
@@ -139,6 +169,13 @@
                     <li><strong>ПОГОДА</strong> - "То, что показывает термометр"</li>
                 </ul>
                 
+                <h3>Источник слов</h3>
+                <ul>
+                    <li><strong>Встроенные</strong> — категории слов из настроек</li>
+                    <li><strong>Пользовательские</strong> — свои файлы, все объединяются в один пакет</li>
+                    <li><strong>По темам</strong> — каждый файл — отдельная тема; перед игрой выбираете тему</li>
+                </ul>
+
                 <h3>Одиночная игра и игра на пару</h3>
                 <ul>
                     <li><strong>Одиночная игра</strong> — один раунд по времени из настроек</li>

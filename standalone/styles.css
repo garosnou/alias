@@ -5,6 +5,10 @@
     box-sizing: border-box;
 }
 
+.hidden {
+    display: none !important;
+}
+
 html {
     overflow-y: scroll;
     overflow-x: hidden;
@@ -193,7 +197,8 @@ body.standalone-host .container {
 }
 
 /* Uploader */
-#custom-pack-uploader {
+#custom-pack-uploader,
+#themes-pack-uploader {
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
     border-radius: 12px;
@@ -258,6 +263,63 @@ body.standalone-host .container {
 .pack-status {
     margin-top: 0.75rem;
     color: rgba(255,255,255,0.95);
+}
+
+.theme-picker-lead {
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+.theme-picker-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.85rem;
+    margin: 0 0 1.5rem;
+}
+
+.theme-picker-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 1rem 0.9rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.theme-picker-card:hover:not(.theme-picker-card--depleted) {
+    transform: translateY(-2px);
+    border-color: rgba(253, 224, 71, 0.55);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.theme-picker-card--depleted {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.theme-picker-card-name {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+.theme-picker-card-meta {
+    font-size: 0.85rem;
+    opacity: 0.82;
+}
+
+.theme-picker-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
 }
 
 .game-banner-settings-actions {

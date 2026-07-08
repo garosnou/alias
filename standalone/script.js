@@ -31,13 +31,19 @@ let gameState = {
 let settings = {
     gameTime: 60,
     category: 'general',
-    wordSource: 'builtin' // builtin | custom
+    wordSource: 'builtin' // builtin | custom | themes
 };
 
 // Хранилище пользовательских слов (в памяти)
 let CUSTOM_WORDS = null;
 let CUSTOM_WORDS_META = { packs: [], fileName: null, usedCount: 0, total: 0 };
 let CUSTOM_WORDS_USED = new Set(); // множество использованных слов (строки в верхнем регистре)
+
+// Темы: каждый .txt — отдельная тема
+let THEME_PACKS = [];
+let THEME_USED = {};
+let activeThemeId = null;
+let pendingGameStart = null; // 'single' | 'pair'
 
 
 
@@ -258,9 +264,11 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
     loadLastGameInfo();
     loadCustomWordsFromStorage();
+    loadThemesFromStorage();
     updateWordSourceUI();
     setupKeyboardControls();
     setupCustomPackControls();
+    setupThemePackControls();
     setupCustomPackDepletedOverlay();
     setupFlexibleTournamentFormListeners();
     initFlexibleTurnResultsWordEdit();
@@ -268,6 +276,307 @@ document.addEventListener('DOMContentLoaded', function() {
     setupGameBannerControls();
     updateMainInfoBanner();
 });
+
+function generateThemeId() {
+    return 'theme_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+}
+
+function themeDisplayName(fileName) {
+    return String(fileName || 'theme.txt').replace(/\.txt$/i, '') || 'Тема';
+}
+
+function getThemeById(themeId) {
+    if (!themeId) return null;
+    return THEME_PACKS.find((t) => t.id === themeId) || null;
+}
+
+function getThemeUsedSet(themeId) {
+    if (!themeId) return new Set();
+    if (!THEME_USED[themeId]) THEME_USED[themeId] = new Set();
+    return THEME_USED[themeId];
+}
+
+function persistThemesStorage() {
+    try {
+        localStorage.setItem('alias-theme-packs', JSON.stringify(THEME_PACKS));
+    } catch (_) {}
+    persistThemeUsedStorage();
+}
+
+function persistThemeUsedStorage() {
+    try {
+        const obj = {};
+        Object.keys(THEME_USED).forEach((id) => {
+            obj[id] = Array.from(THEME_USED[id] || []);
+        });
+        localStorage.setItem('alias-theme-used', JSON.stringify(obj));
+    } catch (_) {}
+}
+
+function installThemePacks(themes, options) {
+    const list = Array.isArray(themes) ? themes.filter((t) => t && t.words && t.words.length) : [];
+    if (!list.length) return 0;
+    const appendMode = options && options.append;
+    if (appendMode) {
+        THEME_PACKS = THEME_PACKS.concat(list);
+    } else {
+        THEME_PACKS = list;
+        THEME_USED = {};
+        try {
+            localStorage.removeItem('alias-theme-used');
+        } catch (_) {}
+    }
+    persistThemesStorage();
+    renderThemePackList();
+    updateThemePackStatus();
+    updateMainInfoBanner();
+    return list.length;
+}
+
+function appendWordsToTheme(themeId, words) {
+    const theme = getThemeById(themeId);
+    if (!theme || !words || !words.length) return 0;
+    const merged = [...new Set(theme.words.concat(words))];
+    const added = merged.length - theme.words.length;
+    theme.words = merged;
+    persistThemesStorage();
+    renderThemePackList();
+    updateThemePackStatus();
+    updateMainInfoBanner();
+    return added;
+}
+
+function getUnusedThemeWords(themeId) {
+    const theme = getThemeById(themeId);
+    if (!theme || !theme.words.length) return [];
+    const used = getThemeUsedSet(themeId);
+    return theme.words.filter((w) => !used.has(w));
+}
+
+function renderThemePackList() {
+    const list = document.getElementById('themes-pack-list');
+    if (!list) return;
+    if (!THEME_PACKS.length) {
+        list.innerHTML = '';
+        list.classList.add('hidden');
+        return;
+    }
+    list.classList.remove('hidden');
+    list.innerHTML = THEME_PACKS.map((t) => {
+        const remaining = getUnusedThemeWords(t.id).length;
+        return `<li><span class="custom-pack-list-name">${escapeHtmlFlexible(t.name)}</span> <span class="custom-pack-list-count">${remaining}/${t.words.length} сл.</span></li>`;
+    }).join('');
+}
+
+function updateThemePackStatus() {
+    const status = document.getElementById('themes-pack-status');
+    if (!status) return;
+    if (!THEME_PACKS.length) {
+        status.textContent = 'Темы не загружены';
+        renderThemePackList();
+        return;
+    }
+    const totalWords = THEME_PACKS.reduce((sum, t) => sum + t.words.length, 0);
+    const totalRemaining = THEME_PACKS.reduce((sum, t) => sum + getUnusedThemeWords(t.id).length, 0);
+    status.textContent = `Тем: ${THEME_PACKS.length}. Слов: ${totalWords}. Неиспользованных: ${totalRemaining}.`;
+    renderThemePackList();
+}
+
+function loadThemesFromStorage() {
+    const raw = localStorage.getItem('alias-theme-packs');
+    if (!raw) return;
+    try {
+        const parsed = JSON.parse(raw);
+        THEME_PACKS = Array.isArray(parsed)
+            ? parsed
+                  .filter((t) => t && Array.isArray(t.words))
+                  .map((t) => ({
+                      id: String(t.id || generateThemeId()),
+                      name: String(t.name || 'Тема'),
+                      words: t.words
+                  }))
+            : [];
+    } catch (_) {
+        THEME_PACKS = [];
+    }
+    const usedRaw = localStorage.getItem('alias-theme-used');
+    THEME_USED = {};
+    if (usedRaw) {
+        try {
+            const parsed = JSON.parse(usedRaw);
+            if (parsed && typeof parsed === 'object') {
+                Object.keys(parsed).forEach((id) => {
+                    THEME_USED[id] = new Set(Array.isArray(parsed[id]) ? parsed[id] : []);
+                });
+            }
+        } catch (_) {
+            THEME_USED = {};
+        }
+    }
+    renderThemePackList();
+}
+
+async function parseThemeFiles(files) {
+    const list = Array.from(files || []).filter((f) => f);
+    if (!list.length) throw new Error('Не выбраны файлы');
+    const themes = [];
+    for (const file of list) {
+        const words = await parseWordFile(file);
+        themes.push({
+            id: generateThemeId(),
+            name: themeDisplayName(file.name),
+            words
+        });
+    }
+    return themes;
+}
+
+function setupThemePackControls() {
+    const sourceThemes = document.getElementById('source-themes');
+    const importBtn = document.getElementById('import-themes-btn');
+    const appendBtn = document.getElementById('append-themes-btn');
+    const clearBtn = document.getElementById('clear-themes-btn');
+    const input = document.getElementById('theme-pack-input');
+
+    if (sourceThemes) {
+        sourceThemes.addEventListener('change', () => {
+            settings.wordSource = 'themes';
+            updateWordSourceUI();
+        });
+    }
+
+    async function importThemeFiles(appendMode) {
+        const files = input && input.files ? Array.from(input.files) : [];
+        if (!files.length) {
+            showNotification('Выберите один или несколько файлов .txt');
+            return;
+        }
+        try {
+            const themes = await parseThemeFiles(files);
+            const count = installThemePacks(themes, { append: appendMode });
+            showNotification(
+                appendMode
+                    ? `Добавлено тем: ${count} (всего ${THEME_PACKS.length})`
+                    : `Загружено тем: ${count}`
+            );
+            if (input) input.value = '';
+        } catch (e) {
+            console.error(e);
+            showNotification(e && e.message ? String(e.message) : 'Ошибка загрузки тем');
+        }
+    }
+
+    if (importBtn) importBtn.addEventListener('click', () => importThemeFiles(false));
+    if (appendBtn) appendBtn.addEventListener('click', () => importThemeFiles(true));
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            THEME_PACKS = [];
+            THEME_USED = {};
+            activeThemeId = null;
+            localStorage.removeItem('alias-theme-packs');
+            localStorage.removeItem('alias-theme-used');
+            renderThemePackList();
+            updateThemePackStatus();
+            updateMainInfoBanner();
+            showNotification('Темы очищены');
+            resetGameUI();
+        });
+    }
+
+    updateThemePackStatus();
+    renderThemePackList();
+}
+
+function renderThemePickerList() {
+    const list = document.getElementById('theme-picker-list');
+    const empty = document.getElementById('theme-picker-empty');
+    if (!list) return;
+    if (!THEME_PACKS.length) {
+        list.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        return;
+    }
+    if (empty) empty.classList.add('hidden');
+    list.innerHTML = THEME_PACKS.map((t) => {
+        const remaining = getUnusedThemeWords(t.id).length;
+        const depleted = remaining === 0;
+        return `<button type="button" class="theme-picker-card${depleted ? ' theme-picker-card--depleted' : ''}" onclick="pickThemeAndStart('${t.id}')">
+            <span class="theme-picker-card-name">${escapeHtmlFlexible(t.name)}</span>
+            <span class="theme-picker-card-meta">${remaining} из ${t.words.length} слов</span>
+        </button>`;
+    }).join('');
+}
+
+function showThemePicker() {
+    const title = document.getElementById('theme-picker-title');
+    const lead = document.getElementById('theme-picker-lead');
+    if (title) {
+        title.textContent = pendingGameStart === 'pair' ? 'Выберите тему для игры на пару' : 'Выберите тему';
+    }
+    if (lead) {
+        lead.textContent =
+            pendingGameStart === 'pair'
+                ? 'Одна тема на оба раунда. Нажмите на тему, чтобы начать.'
+                : 'Нажмите на тему, чтобы начать игру.';
+    }
+    renderThemePickerList();
+    showScreen('theme-picker');
+}
+
+function cancelThemePicker() {
+    pendingGameStart = null;
+    showMainMenu();
+}
+
+function pickThemeAndStart(themeId) {
+    const theme = getThemeById(themeId);
+    if (!theme) {
+        showNotification('Тема не найдена');
+        return;
+    }
+    if (!getUnusedThemeWords(themeId).length) {
+        showNotification('В этой теме не осталось слов');
+        return;
+    }
+    activeThemeId = themeId;
+    const action = pendingGameStart || 'single';
+    pendingGameStart = null;
+    if (action === 'pair') {
+        pairGameState.mode = 'pair';
+        pairGameState.currentLeg = 0;
+        pairGameState.legs = [null, null];
+    } else if (action !== 'resume') {
+        pairGameState.mode = null;
+        pairGameState.currentLeg = 0;
+        pairGameState.legs = [null, null];
+    }
+    startGame();
+}
+
+function ensureThemeSelectedForGame(pendingAction) {
+    if (settings.wordSource !== 'themes') return true;
+    if (activeThemeId && getThemeById(activeThemeId) && getUnusedThemeWords(activeThemeId).length) {
+        return true;
+    }
+    pendingGameStart = pendingAction;
+    showThemePicker();
+    return false;
+}
+
+function getCategoryDisplayName(category, themeName) {
+    if (category === 'theme' && themeName) return 'Тема: ' + themeName;
+    return builtinCategoryName(category);
+}
+
+function resolveGameCategory() {
+    if (settings.wordSource === 'builtin') return settings.category;
+    if (settings.wordSource === 'themes') return 'theme';
+    return 'custom';
+}
+
+function isPackWordSource() {
+    return settings.wordSource === 'custom' || settings.wordSource === 'themes';
+}
 
 function normalizeCustomWordsMeta(meta) {
     if (!meta || typeof meta !== 'object') {
@@ -383,9 +692,21 @@ function setupCustomPackDepletedOverlay() {
                 return;
             }
             try {
-                const { words, packs } = await parseWordFiles(files);
-                installCustomWordPacks(words, packs, { resetUsed: true });
                 const WORDS_BATCH_SIZE = 50;
+                if (settings.wordSource === 'themes' && activeThemeId) {
+                    const themes = await parseThemeFiles(files);
+                    let added = 0;
+                    themes.forEach((t) => {
+                        added += appendWordsToTheme(activeThemeId, t.words);
+                    });
+                    if (!added) {
+                        showNotification('Новых слов в файле не найдено');
+                        return;
+                    }
+                } else {
+                    const { words, packs } = await parseWordFiles(files);
+                    installCustomWordPacks(words, packs, { resetUsed: true });
+                }
                 const more = getWordsForCurrentSource(gameState.category, WORDS_BATCH_SIZE) || [];
                 if (!more.length) {
                     showNotification('В файле нет ни одного слова');
@@ -524,20 +845,33 @@ function setupCustomPackControls() {
 
 function updateWordSourceUI() {
     const uploader = document.getElementById('custom-pack-uploader');
+    const themesUploader = document.getElementById('themes-pack-uploader');
     const sourceCustom = document.getElementById('source-custom');
     const sourceBuiltin = document.getElementById('source-builtin');
+    const sourceThemes = document.getElementById('source-themes');
     const categorySelector = document.getElementById('category-selector');
-    
-    if (!uploader || !sourceCustom || !sourceBuiltin) return;
-    
-    uploader.style.display = settings.wordSource === 'custom' ? '' : 'none';
-    categorySelector.style.display = settings.wordSource === 'custom' ? 'none' : '';
-    
+    const hintBuiltin = document.getElementById('word-source-hint-builtin');
+    const hintCustom = document.getElementById('word-source-hint-custom');
+    const hintThemes = document.getElementById('word-source-hint-themes');
+
+    if (!sourceCustom || !sourceBuiltin) return;
+
+    if (uploader) uploader.style.display = settings.wordSource === 'custom' ? '' : 'none';
+    if (themesUploader) themesUploader.style.display = settings.wordSource === 'themes' ? '' : 'none';
+    if (categorySelector) categorySelector.style.display = settings.wordSource === 'builtin' ? '' : 'none';
+
     sourceCustom.checked = settings.wordSource === 'custom';
     sourceBuiltin.checked = settings.wordSource === 'builtin';
+    if (sourceThemes) sourceThemes.checked = settings.wordSource === 'themes';
+
+    if (hintBuiltin) hintBuiltin.classList.toggle('hidden', settings.wordSource !== 'builtin');
+    if (hintCustom) hintCustom.classList.toggle('hidden', settings.wordSource !== 'custom');
+    if (hintThemes) hintThemes.classList.toggle('hidden', settings.wordSource !== 'themes');
+
+    if (settings.wordSource !== 'themes') activeThemeId = null;
 
     updateCustomPackStatus();
-    // Сбрасываем состояние игры при смене источника слов
+    updateThemePackStatus();
     resetGameUI();
 }
 
@@ -638,15 +972,23 @@ function loadSettings() {
 // Сохранение настроек в localStorage
 function saveSettings() {
     settings.gameTime = parseInt(document.getElementById('game-time').value);
-    settings.wordSource = document.getElementById('source-custom').checked ? 'custom' : 'builtin';
-    
-    // Сохраняем категорию только для встроенных слов
+    const sourceThemes = document.getElementById('source-themes');
+    if (document.getElementById('source-custom').checked) {
+        settings.wordSource = 'custom';
+    } else if (sourceThemes && sourceThemes.checked) {
+        settings.wordSource = 'themes';
+    } else {
+        settings.wordSource = 'builtin';
+    }
+
     if (settings.wordSource === 'builtin') {
         settings.category = document.getElementById('category').value;
-    } else {
+    } else if (settings.wordSource === 'custom') {
         settings.category = 'custom';
+    } else {
+        settings.category = 'theme';
     }
-    
+
     localStorage.setItem('alias-settings', JSON.stringify(settings));
     showNotification('Настройки сохранены!');
     showMainMenu();
@@ -863,7 +1205,8 @@ function builtinCategoryName(key) {
         'sport': 'Спорт',
         'food': 'Еда',
         'cities': 'Города',
-        'custom': 'Пользовательские'
+        'custom': 'Пользовательские',
+        'theme': 'По темам'
     };
     return map[key] || key;
 }
@@ -953,6 +1296,7 @@ function resetGameUI() {
 function showMainMenu() {
     // При входе в главное меню выходим из соревновательного режима
     closeCustomWordPackDepletedOverlay();
+    pendingGameStart = null;
     competitiveState.isCompetitiveMode = false;
     flexibleTournamentState.isFlexibleMode = false;
     pairGameState.mode = null;
@@ -969,11 +1313,13 @@ function showMainMenu() {
 function showSettings() {
     updateSettingsUI();
     updateCustomPackStatus();
+    updateThemePackStatus();
     showScreen('settings');
 }
 function showRules() { showScreen('rules'); }
 
 function startSingleGame() {
+    if (!ensureThemeSelectedForGame('single')) return;
     pairGameState.mode = null;
     pairGameState.currentLeg = 0;
     pairGameState.legs = [null, null];
@@ -981,6 +1327,7 @@ function startSingleGame() {
 }
 
 function startPairGame() {
+    if (!ensureThemeSelectedForGame('pair')) return;
     pairGameState.mode = 'pair';
     pairGameState.currentLeg = 0;
     pairGameState.legs = [null, null];
@@ -1019,6 +1366,8 @@ function finalizePairLegOrShowResults() {
 
     if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
         markWordsAsUsed();
+    } else if (settings.wordSource === 'themes' && activeThemeId) {
+        markThemeWordsAsUsed();
     }
 
     pairGameState.legs[pairGameState.currentLeg] = legSnapshot;
@@ -1059,7 +1408,10 @@ function showPairCombinedResults() {
     document.getElementById('correct-answers').textContent = totalCorrect;
     document.getElementById('skipped-words').textContent = totalSkipped;
     document.getElementById('game-time-result').textContent = totalDuration + ' секунд';
-    document.getElementById('game-category-result').textContent = builtinCategoryName(gameState.category);
+    document.getElementById('game-category-result').textContent = getCategoryDisplayName(
+        gameState.category,
+        gameState.themeName
+    );
 
     displayPairWordsLists(leg0, leg1);
 
@@ -1126,7 +1478,6 @@ function resetPairResultsUi() {
 
 // Начало игры
 function startGame() {
-    // Проверка наличия файла при выборе custom
     if (settings.wordSource === 'custom') {
         if (!CUSTOM_WORDS) {
             showNotification('Загрузите файл со словами в настройках');
@@ -1140,14 +1491,27 @@ function startGame() {
         }
     }
 
+    if (settings.wordSource === 'themes') {
+        if (!THEME_PACKS.length) {
+            showNotification('Загрузите темы в настройках');
+            showSettings();
+            return;
+        }
+        if (!activeThemeId || !getThemeById(activeThemeId)) {
+            if (!pendingGameStart) pendingGameStart = 'resume';
+            showThemePicker();
+            return;
+        }
+    }
+
+    const themeMeta = settings.wordSource === 'themes' && activeThemeId ? getThemeById(activeThemeId) : null;
+
     // Определяем настройки для игры
     let gameTime, category;
-    
+
     if (tournamentState.isTournamentMode) {
-        // Используем настройки турнира; источник слов и категория берем из общих настроек
         gameTime = parseInt(document.getElementById('tournament-game-time').value);
-        category = settings.wordSource === 'builtin' ? settings.category : 'custom';
-        // режим игры фиксируется при старте турнира
+        category = resolveGameCategory();
     } else if (flexibleTournamentState.isFlexibleMode) {
         readFlexibleSettingsFromForm();
         const ftSel = document.getElementById('flexible-tournament-time');
@@ -1155,17 +1519,16 @@ function startGame() {
         if (Number.isNaN(gameTime) || gameTime <= 0) gameTime = 60;
         flexibleTournamentState.gameTime = gameTime;
         writeFlexibleTournamentToStorage();
-        category = settings.wordSource === 'builtin' ? settings.category : 'custom';
+        category = resolveGameCategory();
     } else if (competitiveState.isCompetitiveMode) {
         gameTime = settings.gameTime;
-        category = settings.category;
+        category = resolveGameCategory();
     } else if (pairGameState.mode === 'pair') {
         gameTime = settings.gameTime;
-        category = settings.category;
+        category = resolveGameCategory();
     } else {
-        // Используем обычные настройки
         gameTime = settings.gameTime;
-        category = settings.category;
+        category = resolveGameCategory();
     }
 
     const WORDS_BATCH_SIZE = 50;
@@ -1181,7 +1544,7 @@ function startGame() {
         }
     }
 
-    if (!words.length && settings.wordSource === 'custom') {
+    if (!words.length && isPackWordSource()) {
         gameState = {
             isPlaying: true,
             isPaused: true,
@@ -1195,6 +1558,8 @@ function startGame() {
             timeRemaining: gameTime,
             words: [],
             category: category,
+            themeName: themeMeta ? themeMeta.name : null,
+            themeId: themeMeta ? themeMeta.id : null,
             startTime: Date.now(),
             timerInterval: null,
             score: 0,
@@ -1210,7 +1575,11 @@ function startGame() {
         if (prep) prep.style.display = 'none';
         showCurrentWord();
         openCustomWordPackDepletedOverlay();
-        showNotification('Слова в пакете закончились — загрузите новый файл');
+        showNotification(
+            settings.wordSource === 'themes'
+                ? 'Слова в теме закончились — загрузите дополнение'
+                : 'Слова в пакете закончились — загрузите новый файл'
+        );
         if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
         return;
     }
@@ -1228,6 +1597,8 @@ function startGame() {
         timeRemaining: gameTime,
         words: words,
         category: category,
+        themeName: themeMeta ? themeMeta.name : null,
+        themeId: themeMeta ? themeMeta.id : null,
         startTime: Date.now(),
         timerInterval: null,
         score: 0,
@@ -1271,20 +1642,18 @@ function getWordsForCurrentSource(category, count) {
         const words = CUSTOM_WORDS;
         if (!words.length) return [];
 
-        // Берем только неиспользованные слова
-        const remaining = words.filter(w => !CUSTOM_WORDS_USED.has(w));
-        if (remaining.length === 0) {
-            return [];
-        }
+        const remaining = words.filter((w) => !CUSTOM_WORDS_USED.has(w));
+        if (remaining.length === 0) return [];
         const shuffled = [...remaining].sort(() => 0.5 - Math.random());
-        const taken = shuffled.slice(0, Math.min(count, remaining.length));
-        // НЕ помечаем как использованные здесь - это будет сделано после игры
-        return taken;
-    } else {
-        // Для встроенных слов просто получаем случайные слова
-        // Они будут возвращаться в игру, так как мы не отслеживаем использованные
-        return window.getWordsForGame(category, count);
+        return shuffled.slice(0, Math.min(count, remaining.length));
     }
+    if (settings.wordSource === 'themes' && activeThemeId) {
+        const remaining = getUnusedThemeWords(activeThemeId);
+        if (!remaining.length) return [];
+        const shuffled = [...remaining].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, Math.min(count, remaining.length));
+    }
+    return window.getWordsForGame(category, count);
 }
 
 // Запуск таймера
@@ -1479,6 +1848,10 @@ function nextWord() {
                 pauseForCustomWordPack();
                 return;
             }
+            if (settings.wordSource === 'themes' && activeThemeId) {
+                pauseForCustomWordPack();
+                return;
+            }
             if (isFlexibleActiveRound()) {
                 gameState.currentWordIndex = Math.max(0, gameState.words.length - 1);
                 showCurrentWord();
@@ -1563,6 +1936,8 @@ function endGame() {
     // Помечаем слова как использованные (только для пользовательских пакетов)
     if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
         markWordsAsUsed();
+    } else if (settings.wordSource === 'themes' && activeThemeId) {
+        markThemeWordsAsUsed();
     }
     
     const finalScore = Math.round(gameState.score);
@@ -1571,7 +1946,10 @@ function endGame() {
     document.getElementById('skipped-words').textContent = gameState.skippedWords;
     const gameDuration = Math.round((Date.now() - gameState.startTime) / 1000);
     document.getElementById('game-time-result').textContent = gameDuration + ' секунд';
-    document.getElementById('game-category-result').textContent = builtinCategoryName(gameState.category);
+    document.getElementById('game-category-result').textContent = getCategoryDisplayName(
+        gameState.category,
+        gameState.themeName
+    );
 
     resetPairResultsUi();
     
@@ -2331,14 +2709,12 @@ function updateMainInfoBanner() {
     const el = document.getElementById('pack-info');
     const text = document.getElementById('pack-info-text');
     if (!el || !text) return;
-    const isCustom = settings.wordSource === 'custom';
-    if (isCustom) {
+    if (settings.wordSource === 'custom') {
         if (!CUSTOM_WORDS || !Array.isArray(CUSTOM_WORDS) || CUSTOM_WORDS.length === 0) {
-            text.textContent = `Режим: Пользовательский. Слова не загружены.`;
+            text.textContent = 'Режим: Пользовательский. Слова не загружены.';
         } else {
             const meta = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
             const total = CUSTOM_WORDS.length;
-            const used = CUSTOM_WORDS_USED.size;
             const remaining = getUnusedCustomWords().length;
             const packsPart =
                 meta.packs.length > 1
@@ -2348,8 +2724,18 @@ function updateMainInfoBanner() {
                       : meta.fileName || 'custom.txt';
             text.textContent = `Режим: Пользовательский. ${packsPart}. Осталось слов: ${remaining} из ${total}.`;
         }
+    } else if (settings.wordSource === 'themes') {
+        if (!THEME_PACKS.length) {
+            text.textContent = 'Режим: По темам. Темы не загружены.';
+        } else {
+            const active = activeThemeId ? getThemeById(activeThemeId) : null;
+            const activePart = active
+                ? ` Выбрана «${active.name}» (${getUnusedThemeWords(active.id).length} сл.).`
+                : '';
+            text.textContent = `Режим: По темам. Тем загружено: ${THEME_PACKS.length}.${activePart}`;
+        }
     } else {
-        text.textContent = `Режим: Стандартный.`;
+        text.textContent = 'Режим: Стандартный.';
     }
     el.style.display = 'block';
 }
@@ -2662,18 +3048,45 @@ function markWordsAsUsed() {
     updateCustomPackStatus();
 }
 
+function markThemeWordsAsUsed() {
+    if (!activeThemeId || !gameState.words || !Array.isArray(gameState.words)) return;
+    const used = getThemeUsedSet(activeThemeId);
+    for (let i = 0; i < gameState.currentWordIndex; i++) {
+        const word = gameState.words[i];
+        if (word && word !== 'СЛОВО') {
+            used.add(word);
+        }
+    }
+    persistThemeUsedStorage();
+    updateMainInfoBanner();
+    updateThemePackStatus();
+}
+
 // Немедленно помечаем конкретное слово как использованное (при показе)
 function markWordAsUsedImmediate(word) {
     if (!word || word === 'СЛОВО') return;
-    if (settings.wordSource !== 'custom' || !CUSTOM_WORDS) return;
-    if (!CUSTOM_WORDS_USED) CUSTOM_WORDS_USED = new Set();
-    if (!CUSTOM_WORDS_USED.has(word)) {
-        CUSTOM_WORDS_USED.add(word);
-        try {
-            localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED)));
-        } catch (_) {}
-        updateMainInfoBanner();
-        updateCustomPackStatus();
+    if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
+        if (!CUSTOM_WORDS_USED) CUSTOM_WORDS_USED = new Set();
+        if (!CUSTOM_WORDS_USED.has(word)) {
+            CUSTOM_WORDS_USED.add(word);
+            try {
+                localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED)));
+            } catch (_) {}
+            updateMainInfoBanner();
+            updateCustomPackStatus();
+        }
+        return;
+    }
+    if (settings.wordSource === 'themes' && activeThemeId) {
+        const used = getThemeUsedSet(activeThemeId);
+        if (!used.has(word)) {
+            used.add(word);
+            try {
+                persistThemeUsedStorage();
+            } catch (_) {}
+            updateMainInfoBanner();
+            updateThemePackStatus();
+        }
     }
 }
 
@@ -2741,6 +3154,8 @@ window.endGame = endGame;
 window.endTournamentGame = endTournamentGame;
 window.newGame = newGame;
 window.exportUnusedCustomWords = exportUnusedCustomWords;
+window.pickThemeAndStart = pickThemeAndStart;
+window.cancelThemePicker = cancelThemePicker;
 
 // Соревновательный режим API
 window.showCompetitiveSetup = showCompetitiveSetup;
@@ -3374,6 +3789,8 @@ function finalizeFlexibleTurnFromGame() {
 
     if (settings.wordSource === 'custom' && CUSTOM_WORDS) {
         markWordsAsUsed();
+    } else if (settings.wordSource === 'themes' && activeThemeId) {
+        markThemeWordsAsUsed();
     }
 
     const finalScore = Math.round(gameState.score);
