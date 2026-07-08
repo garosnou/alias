@@ -358,6 +358,8 @@
             results = buildResultsPayload(screenId);
         } else if (screenId === 'pause-screen') {
             phase = 'paused';
+        } else if (screenId === 'pair-swap-screen') {
+            phase = 'pair-swap';
         } else if (screenId === 'tournament-match') {
             phase = 'tournament-wait';
             tournamentBoard = {
@@ -445,6 +447,45 @@
             hallScoreboard = buildHallScoreboardForSync();
         }
 
+        var themeName = '';
+        if (gs && gs.themeName) {
+            themeName = String(gs.themeName);
+        } else if (typeof activeThemeId !== 'undefined' && activeThemeId && typeof getThemeById === 'function') {
+            var th = getThemeById(activeThemeId);
+            if (th && th.name) themeName = String(th.name);
+        }
+
+        var pairGame = null;
+        var pairSwap = null;
+        try {
+            var pgs = typeof pairGameState !== 'undefined' ? pairGameState : null;
+            if (pgs && pgs.mode === 'pair') {
+                var legNum = (pgs.currentLeg || 0) + 1;
+                pairGame = {
+                    leg: legNum,
+                    totalLegs: 2,
+                    playerLabel: legNum === 1 ? 'Игрок 1' : 'Игрок 2'
+                };
+                if (screenId === 'pair-swap-screen' && pgs.legs && pgs.legs[0]) {
+                    pairSwap = {
+                        nextPlayerLabel: 'Игрок 2',
+                        leg1Score: pgs.legs[0].score != null ? pgs.legs[0].score : 0,
+                        leg1Meta:
+                            (pgs.legs[0].correctAnswers != null ? pgs.legs[0].correctAnswers : 0) +
+                            ' угадано · ' +
+                            (pgs.legs[0].duration != null ? pgs.legs[0].duration : 0) +
+                            ' с'
+                    };
+                }
+            }
+        } catch (ePair) {}
+
+        var prepTitle = '';
+        if (prep) {
+            var ptEl = prep.querySelector('.prep-title');
+            prepTitle = ptEl ? safeText(ptEl) : '';
+        }
+
         return {
             flash: flash || null,
             state: {
@@ -457,6 +498,10 @@
                 wordNumber: wordNumForHall,
                 prepCountdown: safeText(document.getElementById('prep-countdown')),
                 prepName: safeText(document.getElementById('prep-player-name')),
+                prepTitle: prepTitle,
+                themeName: themeName,
+                pairGame: pairGame,
+                pairSwap: pairSwap,
                 progress: progress,
                 results: results,
                 tournamentBoard: tournamentBoard,

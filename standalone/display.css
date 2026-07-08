@@ -283,6 +283,61 @@ html, body {
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
 }
 
+.display-theme-banner {
+    width: 100%;
+    max-width: min(920px, 94vw);
+    padding: clamp(8px, 1.5vw, 12px) clamp(14px, 2.5vw, 22px);
+    font-size: clamp(0.95rem, 2vw, 1.2rem);
+    font-weight: 600;
+    text-align: center;
+    color: #e0e7ff;
+    background: rgba(79, 70, 229, 0.22);
+    border-radius: 10px;
+    border: 1px solid rgba(165, 180, 252, 0.35);
+}
+
+.display-pair-banner {
+    width: 100%;
+    max-width: min(920px, 94vw);
+    padding: clamp(10px, 1.8vw, 14px) clamp(14px, 2.5vw, 22px);
+    font-size: clamp(1.05rem, 2.2vw, 1.45rem);
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+    color: #bbf7d0;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
+    background: rgba(22, 101, 52, 0.28);
+    border-radius: 12px;
+    border: 1px solid rgba(134, 239, 172, 0.35);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+}
+
+.display-pair-swap {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3vw;
+    text-align: center;
+    background: inherit;
+}
+
+.display-pair-swap-hint {
+    font-size: clamp(1rem, 2.2vw, 1.35rem);
+    opacity: 0.9;
+    margin: 0.75rem 0 0;
+    max-width: 36rem;
+}
+
+.display-pair-swap-score {
+    margin-top: 1.25rem;
+    font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+    font-weight: 600;
+    opacity: 0.92;
+}
+
 .display-prep-name {
     font-size: clamp(1.25rem, 2.8vw, 2rem);
     font-weight: 600;

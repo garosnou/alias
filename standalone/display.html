@@ -18,14 +18,23 @@
         </div>
 
         <div id="display-prep" class="display-prep hidden">
-            <p class="display-prep-label">Подготовка</p>
+            <p class="display-prep-label" id="display-prep-label">Подготовка</p>
             <div class="display-prep-name" id="display-prep-name"></div>
             <div class="display-prep-count" id="display-prep-count"></div>
+        </div>
+
+        <div id="display-pair-swap" class="display-pair-swap hidden">
+            <p class="display-prep-label">Смена объясняющего</p>
+            <div class="display-prep-name" id="display-pair-swap-player">Игрок 2</div>
+            <p class="display-pair-swap-hint" id="display-pair-swap-hint">Ожидание готовности второго игрока</p>
+            <div class="display-pair-swap-score" id="display-pair-swap-score" aria-live="polite"></div>
         </div>
 
         <div id="display-game" class="display-game hidden">
             <div class="display-game-main">
             <div class="display-top">
+                <div id="display-theme-banner" class="display-theme-banner hidden" aria-live="polite"></div>
+                <div id="display-pair-banner" class="display-pair-banner hidden" aria-live="polite"></div>
                 <div id="display-flexible-banner" class="display-flexible-banner hidden" aria-live="polite"></div>
                 <div class="display-timer-row">
                     <div class="display-timer" id="display-timer">60</div>

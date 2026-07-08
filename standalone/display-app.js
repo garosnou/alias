@@ -8,8 +8,15 @@
     var idleBgPool = [];
     var idleBgEnabled = false;
     var prepEl = document.getElementById('display-prep');
+    var prepLabelEl = document.getElementById('display-prep-label');
     var prepNameEl = document.getElementById('display-prep-name');
     var prepCountEl = document.getElementById('display-prep-count');
+    var pairSwapEl = document.getElementById('display-pair-swap');
+    var pairSwapPlayerEl = document.getElementById('display-pair-swap-player');
+    var pairSwapHintEl = document.getElementById('display-pair-swap-hint');
+    var pairSwapScoreEl = document.getElementById('display-pair-swap-score');
+    var themeBannerEl = document.getElementById('display-theme-banner');
+    var pairBannerEl = document.getElementById('display-pair-banner');
     var gameEl = document.getElementById('display-game');
     var pausedEl = document.getElementById('display-paused');
     var wordEl = document.getElementById('display-word');
@@ -755,6 +762,7 @@
 
         idleEl.classList.add('hidden');
         prepEl.classList.add('hidden');
+        if (pairSwapEl) pairSwapEl.classList.add('hidden');
         gameEl.classList.add('hidden');
         pausedEl.classList.add('hidden');
         if (resultsEl) resultsEl.classList.add('hidden');
@@ -767,8 +775,44 @@
                 hallDock.textContent = '';
             }
             prepEl.classList.remove('hidden');
-            prepNameEl.textContent = state.prepName || '';
+            if (prepLabelEl) prepLabelEl.textContent = state.prepTitle || 'Подготовка';
+            var prepNameText = state.prepName || '';
+            if (state.themeName) {
+                prepNameText = prepNameText
+                    ? prepNameText + ' · Тема: ' + state.themeName
+                    : 'Тема: ' + state.themeName;
+            }
+            prepNameEl.textContent = prepNameText;
             prepCountEl.textContent = state.prepCountdown || '';
+            applyGameBannerToDom(null);
+            return;
+        }
+
+        if (phase === 'pair-swap') {
+            if (hallDock) {
+                hallDock.classList.remove('display-hall-scoreboard--flex-cards');
+                hallDock.classList.add('hidden');
+                hallDock.textContent = '';
+            }
+            if (pairSwapEl) {
+                pairSwapEl.classList.remove('hidden');
+                var ps = state.pairSwap || {};
+                if (pairSwapPlayerEl) {
+                    pairSwapPlayerEl.textContent = ps.nextPlayerLabel || 'Игрок 2';
+                }
+                if (pairSwapHintEl) {
+                    pairSwapHintEl.textContent = state.themeName
+                        ? 'Тема: ' + state.themeName + ' · ожидание готовности второго игрока'
+                        : 'Ожидание готовности второго игрока';
+                }
+                if (pairSwapScoreEl) {
+                    var sc = ps.leg1Score != null ? ps.leg1Score : 0;
+                    var meta = ps.leg1Meta || '';
+                    pairSwapScoreEl.textContent = meta
+                        ? 'Игрок 1: ' + sc + ' очков · ' + meta
+                        : 'Игрок 1: ' + sc + ' очков';
+                }
+            }
             applyGameBannerToDom(null);
             return;
         }
@@ -867,6 +911,27 @@
                 } else {
                     flexBn.classList.add('hidden');
                     flexBn.textContent = '';
+                }
+            }
+            if (themeBannerEl) {
+                if (state.themeName) {
+                    themeBannerEl.classList.remove('hidden');
+                    themeBannerEl.textContent = 'Тема: ' + state.themeName;
+                } else {
+                    themeBannerEl.classList.add('hidden');
+                    themeBannerEl.textContent = '';
+                }
+            }
+            if (pairBannerEl) {
+                var pg = state.pairGame;
+                if (pg && pg.playerLabel) {
+                    pairBannerEl.classList.remove('hidden');
+                    var legPart =
+                        pg.leg && pg.totalLegs ? ' · раунд ' + pg.leg + ' из ' + pg.totalLegs : '';
+                    pairBannerEl.textContent = pg.playerLabel + ' объясняет' + legPart;
+                } else {
+                    pairBannerEl.classList.add('hidden');
+                    pairBannerEl.textContent = '';
                 }
             }
             if (phase === 'lobby') {

@@ -555,10 +555,8 @@ function pickThemeAndStart(themeId) {
 
 function ensureThemeSelectedForGame(pendingAction) {
     if (settings.wordSource !== 'themes') return true;
-    if (activeThemeId && getThemeById(activeThemeId) && getUnusedThemeWords(activeThemeId).length) {
-        return true;
-    }
     pendingGameStart = pendingAction;
+    activeThemeId = null;
     showThemePicker();
     return false;
 }
@@ -1374,10 +1372,40 @@ function finalizePairLegOrShowResults() {
 
     if (pairGameState.currentLeg === 0) {
         pairGameState.currentLeg = 1;
-        startGame();
+        showPairSwapScreen();
         return;
     }
 
+    showPairCombinedResults();
+}
+
+function showPairSwapScreen() {
+    const leg0 = pairGameState.legs[0];
+    const scoreEl = document.getElementById('pair-swap-leg1-score');
+    const metaEl = document.getElementById('pair-swap-leg1-meta');
+    if (scoreEl && leg0) scoreEl.textContent = String(leg0.score);
+    if (metaEl && leg0) {
+        metaEl.textContent = `${leg0.correctAnswers} угадано · ${leg0.duration} с`;
+    }
+    showScreen('pair-swap-screen');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function startPairLeg2() {
+    if (pairGameState.mode !== 'pair' || pairGameState.currentLeg !== 1) return;
+    startGame();
+}
+
+function endPairGameEarly() {
+    if (pairGameState.mode !== 'pair') return;
+    pairGameState.legs[1] = {
+        score: 0,
+        correctAnswers: 0,
+        skippedWords: 0,
+        correctWords: [],
+        skippedWordsList: [],
+        duration: 0
+    };
     showPairCombinedResults();
 }
 
@@ -1497,10 +1525,14 @@ function startGame() {
             showSettings();
             return;
         }
+        const isPairLeg2 =
+            pairGameState.mode === 'pair' && pairGameState.currentLeg === 1 && pairGameState.legs[0];
         if (!activeThemeId || !getThemeById(activeThemeId)) {
-            if (!pendingGameStart) pendingGameStart = 'resume';
-            showThemePicker();
-            return;
+            if (!isPairLeg2) {
+                if (!pendingGameStart) pendingGameStart = 'resume';
+                showThemePicker();
+                return;
+            }
         }
     }
 
@@ -3028,35 +3060,39 @@ function displayWordsLists() {
     }
 }
 
-// Помечаем слова как использованные после завершения игры
-function markWordsAsUsed() {
-    if (!gameState.words || !Array.isArray(gameState.words)) return;
-    
-    // Добавляем только те слова, которые игрок действительно видел
-    // (до текущего индекса слова)
-    for (let i = 0; i < gameState.currentWordIndex; i++) {
-        const word = gameState.words[i];
-        if (word && word !== 'СЛОВО') { // Исключаем заглушки
-            CUSTOM_WORDS_USED.add(word);
+function collectPlayedWordsFromGameState() {
+    const played = new Set();
+    if (!gameState) return played;
+    (gameState.correctWords || []).forEach((w) => {
+        if (w && w !== 'СЛОВО') played.add(w);
+    });
+    (gameState.skippedWordsList || []).forEach((w) => {
+        if (w && w !== 'СЛОВО') played.add(w);
+    });
+    if (gameState.words && Array.isArray(gameState.words)) {
+        const lastIdx = Math.min(gameState.currentWordIndex, gameState.words.length - 1);
+        for (let i = 0; i <= lastIdx; i++) {
+            const w = gameState.words[i];
+            if (w && w !== 'СЛОВО') played.add(w);
         }
     }
-    
-    // Сохраняем обновленное состояние
+    return played;
+}
+
+// Помечаем слова как использованные после завершения игры
+function markWordsAsUsed() {
+    if (!gameState) return;
+    const played = collectPlayedWordsFromGameState();
+    played.forEach((w) => CUSTOM_WORDS_USED.add(w));
     localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED)));
-    
     updateMainInfoBanner();
     updateCustomPackStatus();
 }
 
 function markThemeWordsAsUsed() {
-    if (!activeThemeId || !gameState.words || !Array.isArray(gameState.words)) return;
+    if (!activeThemeId || !gameState) return;
     const used = getThemeUsedSet(activeThemeId);
-    for (let i = 0; i < gameState.currentWordIndex; i++) {
-        const word = gameState.words[i];
-        if (word && word !== 'СЛОВО') {
-            used.add(word);
-        }
-    }
+    collectPlayedWordsFromGameState().forEach((w) => used.add(w));
     persistThemeUsedStorage();
     updateMainInfoBanner();
     updateThemePackStatus();
@@ -3156,6 +3192,8 @@ window.newGame = newGame;
 window.exportUnusedCustomWords = exportUnusedCustomWords;
 window.pickThemeAndStart = pickThemeAndStart;
 window.cancelThemePicker = cancelThemePicker;
+window.startPairLeg2 = startPairLeg2;
+window.endPairGameEarly = endPairGameEarly;
 
 // Соревновательный режим API
 window.showCompetitiveSetup = showCompetitiveSetup;

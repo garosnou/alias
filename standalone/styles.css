@@ -322,6 +322,39 @@ body.standalone-host .container {
     justify-content: center;
 }
 
+.pair-swap-shell {
+    text-align: center;
+}
+
+.pair-swap-lead {
+    margin-bottom: 1.25rem;
+}
+
+.pair-swap-summary {
+    margin: 0 0 1.5rem;
+    padding: 1.25rem 1rem;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+.pair-swap-summary p {
+    margin: 0 0 0.35rem;
+}
+
+.pair-swap-meta {
+    opacity: 0.85;
+    font-size: 0.95rem;
+}
+
+.pair-swap-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
 .game-banner-settings-actions {
     display: flex;
     flex-wrap: wrap;

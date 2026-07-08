@@ -193,6 +193,22 @@
         </div>
     </div>
 
+    <!-- Пауза между раундами игры на пару -->
+    <div id="pair-swap-screen" class="screen">
+        <div class="container pair-swap-shell">
+            <h2>Смена объясняющего</h2>
+            <p class="hint pair-swap-lead">Игрок 1 завершил раунд. Когда Игрок 2 готов — нажмите кнопку ниже (на экране зала тоже отображается ожидание).</p>
+            <div class="pair-swap-summary">
+                <p><strong>Игрок 1:</strong> <span id="pair-swap-leg1-score">0</span> очков</p>
+                <p id="pair-swap-leg1-meta" class="pair-swap-meta"></p>
+            </div>
+            <div class="pair-swap-actions">
+                <button type="button" class="btn btn-primary" onclick="startPairLeg2()">Игрок 2 готов — начать</button>
+                <button type="button" class="btn btn-secondary" onclick="endPairGameEarly()">Завершить игру</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Игровой экран -->
     <div id="game-screen" class="screen">
         <div class="container">
