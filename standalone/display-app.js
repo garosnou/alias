@@ -1096,16 +1096,23 @@
                     metaEl.innerHTML =
                         '<div class="display-meta-bar">' + scoreChip + skipInner + '</div>';
                 } else {
-                    var wn = state.wordNumber || 0;
-                    var wordChip =
-                        '<div class="display-meta-chip display-meta-chip--word">' +
-                        '<span class="display-meta-chip-lbl">Слово</span>' +
+                    var correctN = state.correctCount != null ? state.correctCount : 0;
+                    var skippedN = state.skippedCount != null ? state.skippedCount : 0;
+                    var correctChip =
+                        '<div class="display-meta-chip display-meta-chip--correct" role="status">' +
+                        '<span class="display-meta-chip-lbl">Угадано</span>' +
                         '<span class="display-meta-chip-val">' +
-                        String(wn) +
+                        String(correctN) +
+                        '</span></div>';
+                    var skippedChip =
+                        '<div class="display-meta-chip display-meta-chip--skipped" role="status">' +
+                        '<span class="display-meta-chip-lbl">Пропущено</span>' +
+                        '<span class="display-meta-chip-val">' +
+                        String(skippedN) +
                         '</span></div>';
                     metaEl.className = 'display-meta display-meta--hud';
                     metaEl.innerHTML =
-                        '<div class="display-meta-bar">' + wordChip + scoreChip + skipInner + '</div>';
+                        '<div class="display-meta-bar">' + correctChip + skippedChip + '</div>';
                 }
             }
             if (hallDock) {

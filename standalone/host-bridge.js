@@ -523,6 +523,8 @@
                 timeLimit: gs ? gs.timeLimit : 60,
                 score: gs ? Math.round(gs.score) : 0,
                 wordNumber: wordNumForHall,
+                correctCount: gs && gs.correctAnswers != null ? gs.correctAnswers : 0,
+                skippedCount: gs && gs.skippedWords != null ? gs.skippedWords : 0,
                 prepCountdown: safeText(document.getElementById('prep-countdown')),
                 prepName: safeText(document.getElementById('prep-player-name')),
                 prepTitle: prepTitle,
