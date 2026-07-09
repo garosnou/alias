@@ -398,15 +398,16 @@ function renderThemePackList() {
             ? `<span class="theme-cover-thumb" style="background-image:url('${t.cover}')" aria-hidden="true"></span>`
             : `<span class="theme-cover-thumb theme-cover-thumb--empty" aria-hidden="true"></span>`;
         const coverBtn = hasCover
-            ? `<button type="button" class="btn btn-secondary theme-cover-btn" onclick="clearThemeCover('${t.id}')">Убрать обложку</button>`
-            : `<button type="button" class="btn btn-secondary theme-cover-btn" onclick="pickThemeCover('${t.id}')">Обложка</button>`;
+            ? `<button type="button" class="btn btn-secondary theme-pack-btn" onclick="clearThemeCover('${t.id}')">Убрать обложку</button>`
+            : `<button type="button" class="btn btn-secondary theme-pack-btn" onclick="pickThemeCover('${t.id}')">Обложка</button>`;
+        const resetBtn = `<button type="button" class="btn btn-secondary theme-pack-btn" onclick="resetThemeUsedWords('${t.id}')">Сбросить слова</button>`;
         return `<li class="theme-pack-item">
             ${thumb}
             <span class="theme-pack-item-main">
                 <span class="custom-pack-list-name">${escapeHtmlFlexible(t.name)}</span>
                 <span class="custom-pack-list-count">${remaining}/${t.words.length} сл.${hasCover ? ' · обложка' : ''}</span>
             </span>
-            ${coverBtn}
+            <span class="theme-pack-actions">${coverBtn}${resetBtn}</span>
         </li>`;
     }).join('');
 }
@@ -494,6 +495,25 @@ function clearThemeCover(themeId) {
     renderThemePackList();
     updateThemePackStatus();
     showNotification('Обложка убрана');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function resetThemeUsedWords(themeId) {
+    const theme = getThemeById(themeId);
+    if (!theme) {
+        showNotification('Тема не найдена');
+        return;
+    }
+    const used = getThemeUsedSet(themeId);
+    if (!used.size) {
+        showNotification('В этой теме нет использованных слов');
+        return;
+    }
+    THEME_USED[themeId] = new Set();
+    persistThemeUsedStorage();
+    renderThemePackList();
+    updateThemePackStatus();
+    showNotification(`Сброшен прогресс темы «${theme.name}»`);
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
@@ -3351,6 +3371,7 @@ window.pickThemeAndStart = pickThemeAndStart;
 window.cancelThemePicker = cancelThemePicker;
 window.pickThemeCover = pickThemeCover;
 window.clearThemeCover = clearThemeCover;
+window.resetThemeUsedWords = resetThemeUsedWords;
 window.getThemesForHallPicker = getThemesForHallPicker;
 window.startPairLeg2 = startPairLeg2;
 window.endPairGameEarly = endPairGameEarly;
