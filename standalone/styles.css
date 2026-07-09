@@ -863,7 +863,7 @@ body.standalone-host .container {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
-    margin: 2rem 0;
+    margin: 2rem 0 0;
 }
 
 .words-section {
@@ -924,6 +924,7 @@ body.standalone-host .container {
     gap: 1rem;
     justify-content: center;
     flex-wrap: wrap;
+    margin-top: 1.5rem;
 }
 
 /* Заголовки */
