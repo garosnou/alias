@@ -1092,16 +1092,8 @@
                 }
             }
             if (pairBannerEl) {
-                var pg = state.pairGame;
-                if (pg && pg.playerLabel) {
-                    pairBannerEl.classList.remove('hidden');
-                    var legPart =
-                        pg.leg && pg.totalLegs ? ' · раунд ' + pg.leg + ' из ' + pg.totalLegs : '';
-                    pairBannerEl.textContent = pg.playerLabel + ' объясняет' + legPart;
-                } else {
-                    pairBannerEl.classList.add('hidden');
-                    pairBannerEl.textContent = '';
-                }
+                pairBannerEl.classList.add('hidden');
+                pairBannerEl.textContent = '';
             }
             if (phase === 'lobby') {
                 metaEl.className = 'display-meta';
@@ -1141,6 +1133,22 @@
                 } else {
                     var correctN = state.correctCount != null ? state.correctCount : 0;
                     var skippedN = state.skippedCount != null ? state.skippedCount : 0;
+                    var pgHud = state.pairGame;
+                    var playerChip = '';
+                    if (pgHud && (pgHud.leg || pgHud.playerLabel)) {
+                        var playerNum =
+                            pgHud.leg != null
+                                ? String(pgHud.leg)
+                                : /второй/i.test(String(pgHud.playerLabel || ''))
+                                  ? '2'
+                                  : '1';
+                        playerChip =
+                            '<div class="display-meta-chip display-meta-chip--player" role="status">' +
+                            '<span class="display-meta-chip-lbl">Игрок</span>' +
+                            '<span class="display-meta-chip-val">' +
+                            playerNum +
+                            '</span></div>';
+                    }
                     var correctChip =
                         '<div class="display-meta-chip display-meta-chip--correct" role="status">' +
                         '<span class="display-meta-chip-lbl">Угадано</span>' +
@@ -1155,7 +1163,11 @@
                         '</span></div>';
                     metaEl.className = 'display-meta display-meta--hud';
                     metaEl.innerHTML =
-                        '<div class="display-meta-bar">' + correctChip + skippedChip + '</div>';
+                        '<div class="display-meta-bar">' +
+                        playerChip +
+                        correctChip +
+                        skippedChip +
+                        '</div>';
                 }
             }
             if (hallDock) {
