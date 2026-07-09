@@ -288,6 +288,24 @@
         });
     }
 
+    var lastFullSyncRequestAt = 0;
+    function requestFullSync() {
+        var now = Date.now();
+        if (now - lastFullSyncRequestAt < 800) return;
+        lastFullSyncRequestAt = now;
+        var msg = { type: 'REQUEST_FULL', v: 1, _ts: now };
+        if (bc) {
+            try {
+                bc.postMessage(msg);
+            } catch (e) {}
+        }
+        if (window.opener && !window.opener.closed) {
+            try {
+                window.opener.postMessage(msg, '*');
+            } catch (e2) {}
+        }
+    }
+
     function resolveThemeCoverFromState(state) {
         if (!state) return cachedThemeCoverSrc;
         if (state.themeCover !== undefined) {
@@ -297,13 +315,20 @@
                     : '';
             return cachedThemeCoverSrc;
         }
-        if (state.themeCoverKeep) return cachedThemeCoverSrc;
+        if (state.themeCoverKeep) {
+            /* После перезагрузки зала в LS часто только keep без data: — просим полный sync */
+            if (!cachedThemeCoverSrc && (state.themeName || state.phase === 'playing' || state.phase === 'paused')) {
+                requestFullSync();
+            }
+            return cachedThemeCoverSrc;
+        }
         return cachedThemeCoverSrc;
     }
 
     function applyThemeCoverBg(coverSrc, targets) {
         var src = coverSrc && String(coverSrc).indexOf('data:') === 0 ? String(coverSrc) : '';
         var list = Array.isArray(targets) ? targets : [targets];
+        var url = src ? "url('" + src.replace(/'/g, '%27') + "')" : '';
         list.forEach(function (el) {
             if (!el) return;
             if (!src) {
@@ -314,11 +339,8 @@
             }
             el.classList.remove('hidden');
             el.setAttribute('aria-hidden', 'false');
-            if (lastThemeCoverApplied !== src) {
-                el.style.backgroundImage = "url('" + src.replace(/'/g, '%27') + "')";
-            } else if (!el.style.backgroundImage) {
-                el.style.backgroundImage = "url('" + src.replace(/'/g, '%27') + "')";
-            }
+            /* Всегда выставляем url — иначе после clear/hidden фон может не вернуться */
+            el.style.backgroundImage = url;
         });
         if (gameEl) gameEl.classList.toggle('display-game--theme-cover', !!src);
         if (pausedEl) pausedEl.classList.toggle('display-paused--theme-cover', !!src);
@@ -1371,6 +1393,10 @@
         var raw0 = localStorage.getItem(LS_KEY);
         if (raw0) applyIncoming(JSON.parse(raw0));
     } catch (e) {}
+
+    /* На старте всегда просим полный кадр (обложка темы не ужимается в LS keep) */
+    requestFullSync();
+    setTimeout(requestFullSync, 300);
 
     loadIdleBackgrounds();
 

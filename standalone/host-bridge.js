@@ -630,19 +630,35 @@
         }
     }
 
+    function forceFullSyncAndSend() {
+        window.__aliasBannerForceSync = true;
+        lastThemeCoverSent = '';
+        send(null);
+    }
+
+    if (bc) {
+        bc.addEventListener('message', function (ev) {
+            var d = ev && ev.data;
+            if (!d || d.type !== 'REQUEST_FULL') return;
+            forceFullSyncAndSend();
+        });
+    }
+
+    window.addEventListener('message', function (ev) {
+        var d = ev && ev.data;
+        if (!d || d.type !== 'REQUEST_FULL') return;
+        forceFullSyncAndSend();
+    });
+
     /** Окно зала, открытое с этого же host (нужно для file:// — BroadcastChannel между двумя файлами не работает). */
     window.__aliasStandaloneOpenHallWindow = function () {
         try {
             var w = window.open('display.html', 'aliasStandaloneHall', 'width=1280,height=720');
             if (w) {
                 window.__aliasStandaloneDisplayWindow = w;
-                window.__aliasBannerForceSync = true;
-                setTimeout(function () {
-                    send(null);
-                }, 150);
-                setTimeout(function () {
-                    send(null);
-                }, 500);
+                forceFullSyncAndSend();
+                setTimeout(forceFullSyncAndSend, 150);
+                setTimeout(forceFullSyncAndSend, 500);
             }
         } catch (e) {}
     };
