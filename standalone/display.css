@@ -1133,6 +1133,18 @@ html, body {
     display: none;
 }
 
+.display-results-cards--pair {
+    align-items: center;
+}
+
+.display-res-plus {
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    font-weight: 800;
+    opacity: 0.75;
+    line-height: 1;
+    padding: 0 0.15rem;
+}
+
 .display-res-card--total {
     border-color: rgba(134, 239, 172, 0.45);
     background: rgba(22, 101, 52, 0.28);

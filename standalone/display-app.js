@@ -1201,17 +1201,13 @@
                     var legs = Array.isArray(r.pairLegs) ? r.pairLegs : [];
                     var p1 = legs[0] || {};
                     var p2 = legs[1] || {};
-                    var p1Correct = p1.correct != null ? p1.correct : 0;
-                    var p1Skipped = p1.skipped != null ? p1.skipped : 0;
-                    var p2Correct = p2.correct != null ? p2.correct : 0;
-                    var p2Skipped = p2.skipped != null ? p2.skipped : 0;
                     var p1Num = document.getElementById('dr-pair-p1');
                     var p2Num = document.getElementById('dr-pair-p2');
                     var p1Lbl = document.getElementById('dr-pair-p1-lbl');
                     var p2Lbl = document.getElementById('dr-pair-p2-lbl');
                     var totalNum = document.getElementById('dr-pair-total');
-                    if (p1Num) p1Num.textContent = String(p1Correct) + '/' + String(p1Skipped);
-                    if (p2Num) p2Num.textContent = String(p2Correct) + '/' + String(p2Skipped);
+                    if (p1Num) p1Num.textContent = String(p1.score != null ? p1.score : 0);
+                    if (p2Num) p2Num.textContent = String(p2.score != null ? p2.score : 0);
                     if (p1Lbl) p1Lbl.textContent = p1.label || 'Первый Игрок';
                     if (p2Lbl) p2Lbl.textContent = p2.label || 'Второй Игрок';
                     if (totalNum) {

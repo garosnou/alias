@@ -1538,10 +1538,10 @@ function showPairCombinedResults() {
     const leg2Score = document.getElementById('pair-leg2-score');
     const leg1Meta = document.getElementById('pair-leg1-meta');
     const leg2Meta = document.getElementById('pair-leg2-meta');
-    if (leg1Score) leg1Score.textContent = `${leg0.correctAnswers}/${leg0.skippedWords}`;
-    if (leg2Score) leg2Score.textContent = `${leg1.correctAnswers}/${leg1.skippedWords}`;
-    if (leg1Meta) leg1Meta.textContent = 'угадано / пропущено';
-    if (leg2Meta) leg2Meta.textContent = 'угадано / пропущено';
+    if (leg1Score) leg1Score.textContent = String(leg0.score);
+    if (leg2Score) leg2Score.textContent = String(leg1.score);
+    if (leg1Meta) leg1Meta.textContent = '';
+    if (leg2Meta) leg2Meta.textContent = '';
     const pairTotalHost = document.getElementById('pair-total-score-host');
     if (pairTotalHost) pairTotalHost.textContent = String(totalScore);
 
