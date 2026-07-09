@@ -52,6 +52,7 @@ html, body {
 }
 
 .display-game {
+    position: relative;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -69,6 +70,57 @@ html, body {
     max-height: calc(100dvh - 2 * var(--display-root-pad));
     overflow: hidden;
     padding: clamp(12px, 2vw, 24px) 3vw clamp(8px, 1.5vh, 16px);
+}
+
+.display-game-theme-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+}
+
+.display-game-theme-bg.hidden {
+    display: none;
+}
+
+.display-game-theme-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.28);
+}
+
+.display-game-panel {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.display-game.display-game--theme-cover {
+    padding: clamp(14px, 2.2vw, 28px) clamp(14px, 3vw, 36px);
+}
+
+.display-game.display-game--theme-cover .display-game-panel {
+    background: rgba(15, 23, 42, 0.62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 22px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+}
+
+.display-game.display-game--theme-cover.display-game--has-banner .display-game-panel {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .display-game.display-game--has-banner {
@@ -764,11 +816,45 @@ html, body {
 }
 
 .display-paused {
+    position: relative;
     font-size: clamp(1.4rem, 3.5vw, 2.2rem);
     font-weight: 600;
     max-width: 36ch;
     line-height: 1.4;
     opacity: 0.95;
+}
+
+.display-paused.display-paused--theme-cover {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    max-width: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(16px, 3vw, 40px);
+    box-sizing: border-box;
+}
+
+.display-paused.display-paused--theme-cover .display-game-theme-bg {
+    position: absolute;
+    inset: 0;
+}
+
+.display-paused-panel {
+    position: relative;
+    z-index: 1;
+}
+
+.display-paused.display-paused--theme-cover .display-paused-panel {
+    padding: clamp(1.25rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.75rem);
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.68);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    max-width: 36ch;
 }
 
 .display-lobby-hint {

@@ -8,6 +8,7 @@
     var bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL) : null;
     var msgSeq = 0;
     var lastBannerRevSentWithSrc = -1;
+    var lastThemeCoverSent = '';
     window.__aliasBannerForceSync = true;
 
     function safeText(el) {
@@ -450,11 +451,19 @@
         }
 
         var themeName = '';
+        var themeCover = '';
         if (gs && gs.themeName) {
             themeName = String(gs.themeName);
-        } else if (typeof activeThemeId !== 'undefined' && activeThemeId && typeof getThemeById === 'function') {
+        }
+        if (gs && gs.themeCover) {
+            themeCover = String(gs.themeCover);
+        }
+        if (typeof activeThemeId !== 'undefined' && activeThemeId && typeof getThemeById === 'function') {
             var th = getThemeById(activeThemeId);
-            if (th && th.name) themeName = String(th.name);
+            if (th) {
+                if (!themeName && th.name) themeName = String(th.name);
+                if (!themeCover && th.cover) themeCover = String(th.cover);
+            }
         }
 
         var themePicker = null;
@@ -517,6 +526,7 @@
                 prepName: safeText(document.getElementById('prep-player-name')),
                 prepTitle: prepTitle,
                 themeName: themeName,
+                themeCover: themeCover,
                 themePicker: themePicker,
                 pairGame: pairGame,
                 pairSwap: pairSwap,
@@ -543,10 +553,20 @@
                 ? loadGameBannerPayload()
                 : { rev: 0, src: '' };
         p.state.gameBannerRev = banner.rev || 0;
-        if (window.__aliasBannerForceSync || lastBannerRevSentWithSrc !== (banner.rev || 0)) {
+        var forceFull = !!window.__aliasBannerForceSync;
+        if (forceFull || lastBannerRevSentWithSrc !== (banner.rev || 0)) {
             p.state.gameBannerSrc = banner.src || '';
             lastBannerRevSentWithSrc = banner.rev || 0;
             window.__aliasBannerForceSync = false;
+        }
+        var cover = p.state.themeCover || '';
+        var coverKey = cover ? String(cover.length) + ':' + cover.slice(0, 64) : '';
+        if (forceFull || coverKey !== lastThemeCoverSent) {
+            lastThemeCoverSent = coverKey;
+            /* themeCover уже в state — отправляем при смене / полном sync */
+        } else {
+            delete p.state.themeCover;
+            p.state.themeCoverKeep = true;
         }
         msgSeq++;
         var msg = {

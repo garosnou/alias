@@ -22,8 +22,12 @@
     var themePickerLeadEl = document.getElementById('display-theme-picker-lead');
     var themePickerListEl = document.getElementById('display-theme-picker-list');
     var gameEl = document.getElementById('display-game');
+    var gameThemeBgEl = document.getElementById('display-game-theme-bg');
     var pausedEl = document.getElementById('display-paused');
+    var pausedThemeBgEl = document.getElementById('display-paused-theme-bg');
     var wordEl = document.getElementById('display-word');
+    var lastThemeCoverApplied = '';
+    var cachedThemeCoverSrc = '';
     var timerEl = document.getElementById('display-timer');
     var timerRow = document.querySelector('.display-timer-row');
     var progressFill = document.getElementById('display-progress-fill');
@@ -278,6 +282,47 @@
             cachedHallBannerHeightPx = h;
             root.style.setProperty('--hall-banner-height', h + 'px');
         });
+    }
+
+    function resolveThemeCoverFromState(state) {
+        if (!state) return cachedThemeCoverSrc;
+        if (state.themeCover !== undefined) {
+            cachedThemeCoverSrc =
+                state.themeCover && String(state.themeCover).indexOf('data:') === 0
+                    ? String(state.themeCover)
+                    : '';
+            return cachedThemeCoverSrc;
+        }
+        if (state.themeCoverKeep) return cachedThemeCoverSrc;
+        return cachedThemeCoverSrc;
+    }
+
+    function applyThemeCoverBg(coverSrc, targets) {
+        var src = coverSrc && String(coverSrc).indexOf('data:') === 0 ? String(coverSrc) : '';
+        var list = Array.isArray(targets) ? targets : [targets];
+        list.forEach(function (el) {
+            if (!el) return;
+            if (!src) {
+                el.classList.add('hidden');
+                el.style.backgroundImage = '';
+                el.setAttribute('aria-hidden', 'true');
+                return;
+            }
+            el.classList.remove('hidden');
+            el.setAttribute('aria-hidden', 'false');
+            if (lastThemeCoverApplied !== src) {
+                el.style.backgroundImage = "url('" + src.replace(/'/g, '%27') + "')";
+            } else if (!el.style.backgroundImage) {
+                el.style.backgroundImage = "url('" + src.replace(/'/g, '%27') + "')";
+            }
+        });
+        if (gameEl) gameEl.classList.toggle('display-game--theme-cover', !!src);
+        if (pausedEl) pausedEl.classList.toggle('display-paused--theme-cover', !!src);
+        lastThemeCoverApplied = src;
+    }
+
+    function clearThemeCoverBg() {
+        applyThemeCoverBg('', [gameThemeBgEl, pausedThemeBgEl]);
     }
 
     function applyGameBannerToDom(activePanel) {
@@ -774,6 +819,7 @@
         if (displayTournamentWait) displayTournamentWait.classList.add('hidden');
 
         if (phase === 'theme-picker') {
+            clearThemeCoverBg();
             if (hallDock) {
                 hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
@@ -839,6 +885,7 @@
         }
 
         if (phase === 'prep') {
+            clearThemeCoverBg();
             if (hallDock) {
                 hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
@@ -859,6 +906,7 @@
         }
 
         if (phase === 'pair-swap') {
+            clearThemeCoverBg();
             if (hallDock) {
                 hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
@@ -902,6 +950,7 @@
             (canClassic || canFtCall || canFtMatch);
 
         if (showTournament) {
+            clearThemeCoverBg();
             if (hallDock) {
                 hallDock.classList.remove('display-hall-scoreboard--flex-cards');
                 hallDock.classList.add('hidden');
@@ -927,12 +976,14 @@
                         : 'Пауза';
             }
             pausedEl.classList.remove('hidden');
+            applyThemeCoverBg(resolveThemeCoverFromState(state), [pausedThemeBgEl, gameThemeBgEl]);
             applyGameBannerToDom('pause');
             return;
         }
 
         if (phase === 'playing' || phase === 'lobby' || phase === 'final-word') {
             gameEl.classList.remove('hidden');
+            applyThemeCoverBg(resolveThemeCoverFromState(state), [gameThemeBgEl, pausedThemeBgEl]);
             applyGameBannerToDom('game');
             gameEl.classList.toggle('display-game--final-word', phase === 'final-word');
             wordEl.textContent = state.word || '—';
@@ -1156,6 +1207,7 @@
                 resultsGeneric.classList.remove('hidden');
                 resultsBody.textContent = r.body || '';
             }
+            clearThemeCoverBg();
             applyGameBannerToDom(null);
             return;
         }
@@ -1166,6 +1218,7 @@
             hallDock.textContent = '';
         }
 
+        clearThemeCoverBg();
         showIdleScreen();
         applyGameBannerToDom(null);
     }

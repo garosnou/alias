@@ -38,6 +38,8 @@
         </div>
 
         <div id="display-game" class="display-game hidden">
+            <div id="display-game-theme-bg" class="display-game-theme-bg hidden" aria-hidden="true"></div>
+            <div class="display-game-panel">
             <div class="display-game-main">
             <div class="display-top">
                 <div id="display-theme-banner" class="display-theme-banner hidden" aria-live="polite"></div>
@@ -55,9 +57,13 @@
             <div class="display-word" id="display-word">—</div>
             <div id="display-hall-scoreboard" class="display-hall-scoreboard hidden" aria-live="polite"></div>
             </div>
+            </div>
         </div>
 
-        <div id="display-paused" class="display-paused hidden"><span id="display-paused-text">Пауза</span></div>
+        <div id="display-paused" class="display-paused hidden">
+            <div id="display-paused-theme-bg" class="display-game-theme-bg hidden" aria-hidden="true"></div>
+            <div class="display-paused-panel"><span id="display-paused-text">Пауза</span></div>
+        </div>
 
         <div id="display-game-banner" class="display-game-banner hidden" aria-hidden="true">
             <img id="display-game-banner-img" alt="">
