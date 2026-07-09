@@ -360,6 +360,8 @@
             phase = 'paused';
         } else if (screenId === 'pair-swap-screen') {
             phase = 'pair-swap';
+        } else if (screenId === 'theme-picker') {
+            phase = 'theme-picker';
         } else if (screenId === 'tournament-match') {
             phase = 'tournament-wait';
             tournamentBoard = {
@@ -455,6 +457,21 @@
             if (th && th.name) themeName = String(th.name);
         }
 
+        var themePicker = null;
+        if (screenId === 'theme-picker' && typeof getThemesForHallPicker === 'function') {
+            try {
+                var titleEl = document.getElementById('theme-picker-title');
+                var leadEl = document.getElementById('theme-picker-lead');
+                themePicker = {
+                    title: titleEl ? safeText(titleEl) : 'Выберите тему',
+                    lead: leadEl ? safeText(leadEl) : 'Ведущий выбирает тему',
+                    themes: getThemesForHallPicker()
+                };
+            } catch (eTp) {
+                themePicker = null;
+            }
+        }
+
         var pairGame = null;
         var pairSwap = null;
         try {
@@ -500,6 +517,7 @@
                 prepName: safeText(document.getElementById('prep-player-name')),
                 prepTitle: prepTitle,
                 themeName: themeName,
+                themePicker: themePicker,
                 pairGame: pairGame,
                 pairSwap: pairSwap,
                 progress: progress,
@@ -648,6 +666,10 @@
             return ret;
         };
     }
+
+    ['startSingleGame', 'startPairGame', 'pickThemeAndStart', 'cancelThemePicker'].forEach(function (name) {
+        wrapPost(name);
+    });
 
     [
         'continueTournament',

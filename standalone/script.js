@@ -110,6 +110,8 @@ const FLEXIBLE_STORAGE_KEY = 'alias-standalone-flexible-v1';
 const HALL_BG_STORAGE_KEY = 'alias-standalone-bg-files-v1';
 const GAME_BANNER_STORAGE_KEY = 'alias-standalone-game-banner-v1';
 const GAME_BANNER_MAX_FILE_BYTES = 1200000;
+const THEME_COVER_MAX_FILE_BYTES = 900000;
+let pendingThemeCoverId = null;
 
 function readFlexibleStorageSnapshot() {
     try {
@@ -298,9 +300,27 @@ function getThemeUsedSet(themeId) {
 
 function persistThemesStorage() {
     try {
-        localStorage.setItem('alias-theme-packs', JSON.stringify(THEME_PACKS));
-    } catch (_) {}
+        const slim = THEME_PACKS.map((t) => ({
+            id: t.id,
+            name: t.name,
+            words: t.words,
+            cover: t.cover || ''
+        }));
+        localStorage.setItem('alias-theme-packs', JSON.stringify(slim));
+    } catch (e) {
+        showNotification('Не удалось сохранить темы (обложки слишком большие?)');
+    }
     persistThemeUsedStorage();
+}
+
+function getThemesForHallPicker() {
+    return THEME_PACKS.map((t) => ({
+        id: t.id,
+        name: t.name,
+        remaining: getUnusedThemeWords(t.id).length,
+        total: t.words ? t.words.length : 0,
+        cover: t.cover || ''
+    }));
 }
 
 function persistThemeUsedStorage() {
@@ -314,7 +334,16 @@ function persistThemeUsedStorage() {
 }
 
 function installThemePacks(themes, options) {
-    const list = Array.isArray(themes) ? themes.filter((t) => t && t.words && t.words.length) : [];
+    const list = Array.isArray(themes)
+        ? themes
+              .filter((t) => t && t.words && t.words.length)
+              .map((t) => ({
+                  id: t.id || generateThemeId(),
+                  name: t.name || 'Тема',
+                  words: t.words,
+                  cover: t.cover || ''
+              }))
+        : [];
     if (!list.length) return 0;
     const appendMode = options && options.append;
     if (appendMode) {
@@ -364,7 +393,21 @@ function renderThemePackList() {
     list.classList.remove('hidden');
     list.innerHTML = THEME_PACKS.map((t) => {
         const remaining = getUnusedThemeWords(t.id).length;
-        return `<li><span class="custom-pack-list-name">${escapeHtmlFlexible(t.name)}</span> <span class="custom-pack-list-count">${remaining}/${t.words.length} сл.</span></li>`;
+        const hasCover = !!(t.cover && String(t.cover).indexOf('data:') === 0);
+        const thumb = hasCover
+            ? `<span class="theme-cover-thumb" style="background-image:url('${t.cover}')" aria-hidden="true"></span>`
+            : `<span class="theme-cover-thumb theme-cover-thumb--empty" aria-hidden="true"></span>`;
+        const coverBtn = hasCover
+            ? `<button type="button" class="btn btn-secondary theme-cover-btn" onclick="clearThemeCover('${t.id}')">Убрать обложку</button>`
+            : `<button type="button" class="btn btn-secondary theme-cover-btn" onclick="pickThemeCover('${t.id}')">Обложка</button>`;
+        return `<li class="theme-pack-item">
+            ${thumb}
+            <span class="theme-pack-item-main">
+                <span class="custom-pack-list-name">${escapeHtmlFlexible(t.name)}</span>
+                <span class="custom-pack-list-count">${remaining}/${t.words.length} сл.${hasCover ? ' · обложка' : ''}</span>
+            </span>
+            ${coverBtn}
+        </li>`;
     }).join('');
 }
 
@@ -393,7 +436,8 @@ function loadThemesFromStorage() {
                   .map((t) => ({
                       id: String(t.id || generateThemeId()),
                       name: String(t.name || 'Тема'),
-                      words: t.words
+                      words: t.words,
+                      cover: typeof t.cover === 'string' ? t.cover : ''
                   }))
             : [];
     } catch (_) {
@@ -425,10 +469,66 @@ async function parseThemeFiles(files) {
         themes.push({
             id: generateThemeId(),
             name: themeDisplayName(file.name),
-            words
+            words,
+            cover: ''
         });
     }
     return themes;
+}
+
+function pickThemeCover(themeId) {
+    if (!getThemeById(themeId)) {
+        showNotification('Тема не найдена');
+        return;
+    }
+    pendingThemeCoverId = themeId;
+    const input = document.getElementById('theme-cover-input');
+    if (input) input.click();
+}
+
+function clearThemeCover(themeId) {
+    const theme = getThemeById(themeId);
+    if (!theme) return;
+    theme.cover = '';
+    persistThemesStorage();
+    renderThemePackList();
+    updateThemePackStatus();
+    showNotification('Обложка убрана');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function onThemeCoverFilePicked(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    const themeId = pendingThemeCoverId;
+    pendingThemeCoverId = null;
+    ev.target.value = '';
+    if (!file || !themeId) return;
+    const theme = getThemeById(themeId);
+    if (!theme) {
+        showNotification('Тема не найдена');
+        return;
+    }
+    if (!file.type || file.type.indexOf('image/') !== 0) {
+        showNotification('Выберите файл изображения');
+        return;
+    }
+    if (file.size > THEME_COVER_MAX_FILE_BYTES) {
+        showNotification('Обложка слишком большая (макс. ~900 КБ). Сожмите изображение.');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function () {
+        theme.cover = String(reader.result || '');
+        persistThemesStorage();
+        renderThemePackList();
+        updateThemePackStatus();
+        showNotification('Обложка для «' + theme.name + '» сохранена');
+        if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+    };
+    reader.onerror = function () {
+        showNotification('Не удалось прочитать файл обложки');
+    };
+    reader.readAsDataURL(file);
 }
 
 function setupThemePackControls() {
@@ -437,6 +537,7 @@ function setupThemePackControls() {
     const appendBtn = document.getElementById('append-themes-btn');
     const clearBtn = document.getElementById('clear-themes-btn');
     const input = document.getElementById('theme-pack-input');
+    const coverInput = document.getElementById('theme-cover-input');
 
     if (sourceThemes) {
         sourceThemes.addEventListener('change', () => {
@@ -482,6 +583,7 @@ function setupThemePackControls() {
             resetGameUI();
         });
     }
+    if (coverInput) coverInput.addEventListener('change', onThemeCoverFilePicked);
 
     updateThemePackStatus();
     renderThemePackList();
@@ -500,9 +602,15 @@ function renderThemePickerList() {
     list.innerHTML = THEME_PACKS.map((t) => {
         const remaining = getUnusedThemeWords(t.id).length;
         const depleted = remaining === 0;
-        return `<button type="button" class="theme-picker-card${depleted ? ' theme-picker-card--depleted' : ''}" onclick="pickThemeAndStart('${t.id}')">
-            <span class="theme-picker-card-name">${escapeHtmlFlexible(t.name)}</span>
-            <span class="theme-picker-card-meta">${remaining} из ${t.words.length} слов</span>
+        const hasCover = !!(t.cover && String(t.cover).indexOf('data:') === 0);
+        const coverStyle = hasCover ? ` style="background-image:url('${t.cover}')"` : '';
+        const coverClass = hasCover ? ' theme-picker-card--has-cover' : '';
+        return `<button type="button" class="theme-picker-card${coverClass}${depleted ? ' theme-picker-card--depleted' : ''}"${coverStyle} onclick="pickThemeAndStart('${t.id}')">
+            <span class="theme-picker-card-shade" aria-hidden="true"></span>
+            <span class="theme-picker-card-body">
+                <span class="theme-picker-card-name">${escapeHtmlFlexible(t.name)}</span>
+                <span class="theme-picker-card-meta">${remaining} из ${t.words.length} слов</span>
+            </span>
         </button>`;
     }).join('');
 }
@@ -516,11 +624,12 @@ function showThemePicker() {
     if (lead) {
         lead.textContent =
             pendingGameStart === 'pair'
-                ? 'Одна тема на оба раунда. Нажмите на тему, чтобы начать.'
-                : 'Нажмите на тему, чтобы начать игру.';
+                ? 'Одна тема на оба раунда. Нажмите на тему, чтобы начать. Выбор виден и на экране зала.'
+                : 'Нажмите на тему, чтобы начать игру. Выбор виден и на экране зала.';
     }
     renderThemePickerList();
     showScreen('theme-picker');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }
 
 function cancelThemePicker() {
@@ -3192,6 +3301,9 @@ window.newGame = newGame;
 window.exportUnusedCustomWords = exportUnusedCustomWords;
 window.pickThemeAndStart = pickThemeAndStart;
 window.cancelThemePicker = cancelThemePicker;
+window.pickThemeCover = pickThemeCover;
+window.clearThemeCover = clearThemeCover;
+window.getThemesForHallPicker = getThemesForHallPicker;
 window.startPairLeg2 = startPairLeg2;
 window.endPairGameEarly = endPairGameEarly;
 

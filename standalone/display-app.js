@@ -17,6 +17,10 @@
     var pairSwapScoreEl = document.getElementById('display-pair-swap-score');
     var themeBannerEl = document.getElementById('display-theme-banner');
     var pairBannerEl = document.getElementById('display-pair-banner');
+    var themePickerEl = document.getElementById('display-theme-picker');
+    var themePickerTitleEl = document.getElementById('display-theme-picker-title');
+    var themePickerLeadEl = document.getElementById('display-theme-picker-lead');
+    var themePickerListEl = document.getElementById('display-theme-picker-list');
     var gameEl = document.getElementById('display-game');
     var pausedEl = document.getElementById('display-paused');
     var wordEl = document.getElementById('display-word');
@@ -763,10 +767,76 @@
         idleEl.classList.add('hidden');
         prepEl.classList.add('hidden');
         if (pairSwapEl) pairSwapEl.classList.add('hidden');
+        if (themePickerEl) themePickerEl.classList.add('hidden');
         gameEl.classList.add('hidden');
         pausedEl.classList.add('hidden');
         if (resultsEl) resultsEl.classList.add('hidden');
         if (displayTournamentWait) displayTournamentWait.classList.add('hidden');
+
+        if (phase === 'theme-picker') {
+            if (hallDock) {
+                hallDock.classList.remove('display-hall-scoreboard--flex-cards');
+                hallDock.classList.add('hidden');
+                hallDock.textContent = '';
+            }
+            if (themePickerEl) {
+                themePickerEl.classList.remove('hidden');
+                var tp = state.themePicker || {};
+                if (themePickerTitleEl) themePickerTitleEl.textContent = tp.title || 'Выберите тему';
+                if (themePickerLeadEl) {
+                    themePickerLeadEl.textContent = tp.lead || 'Ведущий выбирает тему на своём экране';
+                }
+                if (themePickerListEl) {
+                    var themes = Array.isArray(tp.themes) ? tp.themes : [];
+                    if (!themes.length) {
+                        themePickerListEl.innerHTML =
+                            '<p class="display-theme-picker-empty">Темы ещё не загружены</p>';
+                    } else {
+                        themePickerListEl.innerHTML = themes
+                            .map(function (t) {
+                                var rem = t && t.remaining != null ? t.remaining : 0;
+                                var cover = t && t.cover ? String(t.cover) : '';
+                                var hasCover = cover.indexOf('data:') === 0;
+                                var style = hasCover
+                                    ? ' style="background-image:url(\'' + cover.replace(/'/g, '%27') + '\')"'
+                                    : '';
+                                var cls =
+                                    'display-theme-card' +
+                                    (hasCover ? ' display-theme-card--has-cover' : '') +
+                                    (rem <= 0 ? ' display-theme-card--depleted' : '');
+                                return (
+                                    '<div class="' +
+                                    cls +
+                                    '"' +
+                                    style +
+                                    '>' +
+                                    '<span class="display-theme-card-shade" aria-hidden="true"></span>' +
+                                    '<span class="display-theme-card-body">' +
+                                    '<span class="display-theme-card-name"></span>' +
+                                    '<span class="display-theme-card-meta"></span>' +
+                                    '</span></div>'
+                                );
+                            })
+                            .join('');
+                        var cards = themePickerListEl.querySelectorAll('.display-theme-card');
+                        themes.forEach(function (t, i) {
+                            var card = cards[i];
+                            if (!card) return;
+                            var nameEl = card.querySelector('.display-theme-card-name');
+                            var metaEl = card.querySelector('.display-theme-card-meta');
+                            if (nameEl) nameEl.textContent = t && t.name ? String(t.name) : 'Тема';
+                            if (metaEl) {
+                                var rem2 = t && t.remaining != null ? t.remaining : 0;
+                                var tot2 = t && t.total != null ? t.total : 0;
+                                metaEl.textContent = rem2 + ' из ' + tot2 + ' слов';
+                            }
+                        });
+                    }
+                }
+            }
+            applyGameBannerToDom(null);
+            return;
+        }
 
         if (phase === 'prep') {
             if (hallDock) {

@@ -312,6 +312,103 @@ html, body {
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
 }
 
+.display-theme-picker {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(16px, 3vw, 40px);
+    text-align: center;
+    background: inherit;
+    overflow: auto;
+}
+
+.display-theme-picker-title {
+    margin: 0.35rem 0 0.5rem;
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.display-theme-picker-lead {
+    margin: 0 0 1.5rem;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    opacity: 0.88;
+    max-width: 40rem;
+}
+
+.display-theme-picker-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    gap: clamp(0.85rem, 1.8vw, 1.25rem);
+    width: min(1100px, 94vw);
+}
+
+.display-theme-picker-empty {
+    grid-column: 1 / -1;
+    opacity: 0.8;
+    font-size: 1.15rem;
+}
+
+.display-theme-card {
+    position: relative;
+    min-height: clamp(8.5rem, 18vh, 12rem);
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.1);
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+    text-align: left;
+}
+
+.display-theme-card--has-cover {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.display-theme-card-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.12) 0%, rgba(15, 23, 42, 0.82) 100%);
+}
+
+.display-theme-card:not(.display-theme-card--has-cover) .display-theme-card-shade {
+    background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(15, 23, 42, 0.4) 100%);
+}
+
+.display-theme-card-body {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 1.1rem 1.15rem;
+}
+
+.display-theme-card-name {
+    font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    word-break: break-word;
+}
+
+.display-theme-card-meta {
+    font-size: clamp(0.9rem, 1.6vw, 1.1rem);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.display-theme-card--depleted {
+    opacity: 0.55;
+}
+
 .display-pair-swap {
     position: fixed;
     inset: 0;

@@ -77,9 +77,10 @@
                     <button type="button" class="btn btn-secondary" id="append-themes-btn">Добавить темы</button>
                     <button type="button" class="btn btn-secondary" id="clear-themes-btn">Очистить всё</button>
                 </div>
-                <p class="hint custom-pack-export-hint">Каждый файл — отдельная тема (название берётся из имени файла). «Загрузить» заменяет все темы и сбрасывает прогресс. «Добавить» — дописывает новые темы.</p>
-                <ul id="themes-pack-list" class="custom-pack-list hidden" aria-label="Загруженные темы"></ul>
+                <p class="hint custom-pack-export-hint">Каждый файл — отдельная тема (название берётся из имени файла). «Загрузить» заменяет все темы и сбрасывает прогресс. «Добавить» — дописывает новые темы. После загрузки можно добавить обложку — она будет фоном карточки темы у ведущего и на экране зала.</p>
+                <ul id="themes-pack-list" class="custom-pack-list themes-pack-list hidden" aria-label="Загруженные темы"></ul>
                 <div class="pack-status" id="themes-pack-status">Темы не загружены</div>
+                <input type="file" id="theme-cover-input" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.jpg,.jpeg,.png,.webp,.gif" hidden>
             </div>
             
             <div class="settings-group">
