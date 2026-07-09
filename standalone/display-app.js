@@ -928,7 +928,6 @@
                                     '<span class="display-theme-card-shade" aria-hidden="true"></span>' +
                                     '<span class="display-theme-card-body">' +
                                     '<span class="display-theme-card-name"></span>' +
-                                    '<span class="display-theme-card-meta"></span>' +
                                     '</span></div>'
                                 );
                             })
@@ -938,13 +937,7 @@
                             var card = cards[i];
                             if (!card) return;
                             var nameEl = card.querySelector('.display-theme-card-name');
-                            var metaEl = card.querySelector('.display-theme-card-meta');
                             if (nameEl) nameEl.textContent = t && t.name ? String(t.name) : 'Тема';
-                            if (metaEl) {
-                                var rem2 = t && t.remaining != null ? t.remaining : 0;
-                                var tot2 = t && t.total != null ? t.total : 0;
-                                metaEl.textContent = rem2 + ' из ' + tot2 + ' слов';
-                            }
                         });
                     }
                 }
