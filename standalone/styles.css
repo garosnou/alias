@@ -312,9 +312,21 @@ body.standalone-host .container {
 
 .theme-picker-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.95rem;
     margin: 0 0 1.5rem;
+}
+
+@media (max-width: 900px) {
+    .theme-picker-list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .theme-picker-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .theme-picker-card {
@@ -323,7 +335,8 @@ body.standalone-host .container {
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-end;
-    min-height: 8.5rem;
+    min-height: 7.25rem;
+    aspect-ratio: 5 / 4;
     padding: 0;
     overflow: hidden;
     border-radius: 16px;
