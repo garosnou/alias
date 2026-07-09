@@ -30,8 +30,10 @@ jobs:
           local-dir: ./
           dangerous-clean-slate: false
           exclude: |
-            **/.git*
+            **/.git/**
+            **/.git
             **/.github/**
+            **/.cursor/**
             **/node_modules/**
             **/.DS_Store
             **/README.md
