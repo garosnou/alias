@@ -1538,10 +1538,12 @@ function showPairCombinedResults() {
     const leg2Score = document.getElementById('pair-leg2-score');
     const leg1Meta = document.getElementById('pair-leg1-meta');
     const leg2Meta = document.getElementById('pair-leg2-meta');
-    if (leg1Score) leg1Score.textContent = String(leg0.score);
-    if (leg2Score) leg2Score.textContent = String(leg1.score);
-    if (leg1Meta) leg1Meta.textContent = `${leg0.correctAnswers} угадано · ${leg0.duration} с`;
-    if (leg2Meta) leg2Meta.textContent = `${leg1.correctAnswers} угадано · ${leg1.duration} с`;
+    if (leg1Score) leg1Score.textContent = `${leg0.correctAnswers}/${leg0.skippedWords}`;
+    if (leg2Score) leg2Score.textContent = `${leg1.correctAnswers}/${leg1.skippedWords}`;
+    if (leg1Meta) leg1Meta.textContent = 'угадано / пропущено';
+    if (leg2Meta) leg2Meta.textContent = 'угадано / пропущено';
+    const pairTotalHost = document.getElementById('pair-total-score-host');
+    if (pairTotalHost) pairTotalHost.textContent = String(totalScore);
 
     document.getElementById('final-score').textContent = totalScore;
     document.getElementById('correct-answers').textContent = totalCorrect;
@@ -1551,6 +1553,15 @@ function showPairCombinedResults() {
         gameState.category,
         gameState.themeName
     );
+
+    const resultsStats = document.querySelector('#results .results-stats');
+    const resultsDetails = document.querySelector('#results .results-details');
+    const timeResultRow = document.getElementById('game-time-result');
+    if (resultsStats) resultsStats.classList.add('hidden');
+    if (resultsDetails && timeResultRow) {
+        const timeP = timeResultRow.closest('p');
+        if (timeP) timeP.classList.add('hidden');
+    }
 
     displayPairWordsLists(leg0, leg1);
 
@@ -1613,6 +1624,13 @@ function resetPairResultsUi() {
     const newBtn = document.getElementById('results-new-game-btn');
     if (newBtn) newBtn.textContent = 'Новый раунд';
     setPairWordsContainersMode(false);
+    const resultsStats = document.querySelector('#results .results-stats');
+    if (resultsStats) resultsStats.classList.remove('hidden');
+    const timeResultRow = document.getElementById('game-time-result');
+    if (timeResultRow) {
+        const timeP = timeResultRow.closest('p');
+        if (timeP) timeP.classList.remove('hidden');
+    }
 }
 
 // Начало игры

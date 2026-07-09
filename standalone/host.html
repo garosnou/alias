@@ -325,21 +325,24 @@
             <h2 id="results-title">Результаты игры</h2>
 
             <div id="pair-results-breakdown" class="pair-results-breakdown hidden" aria-live="polite">
-                <h3 class="pair-results-h3">Счёт по раундам</h3>
+                <h3 class="pair-results-h3">Результат по игрокам</h3>
                 <div class="pair-leg-cards">
                     <div class="pair-leg-card">
                         <div class="pair-leg-label">Первый Игрок</div>
-                        <div class="pair-leg-score" id="pair-leg1-score">0</div>
-                        <div class="pair-leg-meta" id="pair-leg1-meta"></div>
+                        <div class="pair-leg-score" id="pair-leg1-score">0/0</div>
+                        <div class="pair-leg-meta" id="pair-leg1-meta">угадано / пропущено</div>
                     </div>
-                    <div class="pair-leg-plus" aria-hidden="true">+</div>
                     <div class="pair-leg-card">
                         <div class="pair-leg-label">Второй Игрок</div>
-                        <div class="pair-leg-score" id="pair-leg2-score">0</div>
-                        <div class="pair-leg-meta" id="pair-leg2-meta"></div>
+                        <div class="pair-leg-score" id="pair-leg2-score">0/0</div>
+                        <div class="pair-leg-meta" id="pair-leg2-meta">угадано / пропущено</div>
+                    </div>
+                    <div class="pair-leg-card pair-leg-card--total">
+                        <div class="pair-leg-label">Общий счёт</div>
+                        <div class="pair-leg-score" id="pair-total-score-host">0</div>
+                        <div class="pair-leg-meta">сумма очков</div>
                     </div>
                 </div>
-                <p class="pair-results-hint">Общий счёт пары — сумма двух раундов</p>
             </div>
             
             <div class="results-stats">

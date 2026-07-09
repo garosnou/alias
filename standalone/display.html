@@ -90,7 +90,7 @@
         <div id="display-results" class="display-results hidden" aria-live="polite">
             <h2 class="display-results-h2" id="display-results-title">Результаты</h2>
             <div id="display-results-round" class="display-results-round hidden">
-                <div class="display-results-cards">
+                <div class="display-results-cards" id="display-results-cards-classic">
                     <div class="display-res-card">
                         <div class="display-res-num" id="dr-final">0</div>
                         <div class="display-res-lbl">Счёт</div>
@@ -102,6 +102,20 @@
                     <div class="display-res-card">
                         <div class="display-res-num" id="dr-skipped-n">0</div>
                         <div class="display-res-lbl">Пропущено</div>
+                    </div>
+                </div>
+                <div class="display-results-cards display-results-cards--pair hidden" id="display-results-cards-pair">
+                    <div class="display-res-card">
+                        <div class="display-res-num" id="dr-pair-p1">0/0</div>
+                        <div class="display-res-lbl" id="dr-pair-p1-lbl">Первый Игрок</div>
+                    </div>
+                    <div class="display-res-card">
+                        <div class="display-res-num" id="dr-pair-p2">0/0</div>
+                        <div class="display-res-lbl" id="dr-pair-p2-lbl">Второй Игрок</div>
+                    </div>
+                    <div class="display-res-card display-res-card--total">
+                        <div class="display-res-num" id="dr-pair-total">0</div>
+                        <div class="display-res-lbl">Общий счёт</div>
                     </div>
                 </div>
                 <p class="display-results-meta" id="display-results-meta"></p>

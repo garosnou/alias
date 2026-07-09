@@ -1193,18 +1193,47 @@
 
             if (r.variant === 'round' || r.variant === 'pair-round') {
                 resultsRound.classList.remove('hidden');
-                drFinal.textContent = r.finalScore != null ? String(r.finalScore) : '0';
-                drCorrectN.textContent = r.correct != null ? String(r.correct) : '0';
-                drSkippedN.textContent = r.skipped != null ? String(r.skipped) : '0';
-                var metaParts = [];
-                if (r.variant === 'pair-round' && r.pairLegs && r.pairLegs.length) {
-                    r.pairLegs.forEach(function (pl) {
-                        if (pl && pl.label) metaParts.push(pl.label + ': ' + (pl.score != null ? pl.score : '0'));
-                    });
+                var cardsClassic = document.getElementById('display-results-cards-classic');
+                var cardsPair = document.getElementById('display-results-cards-pair');
+                if (r.variant === 'pair-round') {
+                    if (cardsClassic) cardsClassic.classList.add('hidden');
+                    if (cardsPair) cardsPair.classList.remove('hidden');
+                    var legs = Array.isArray(r.pairLegs) ? r.pairLegs : [];
+                    var p1 = legs[0] || {};
+                    var p2 = legs[1] || {};
+                    var p1Correct = p1.correct != null ? p1.correct : 0;
+                    var p1Skipped = p1.skipped != null ? p1.skipped : 0;
+                    var p2Correct = p2.correct != null ? p2.correct : 0;
+                    var p2Skipped = p2.skipped != null ? p2.skipped : 0;
+                    var p1Num = document.getElementById('dr-pair-p1');
+                    var p2Num = document.getElementById('dr-pair-p2');
+                    var p1Lbl = document.getElementById('dr-pair-p1-lbl');
+                    var p2Lbl = document.getElementById('dr-pair-p2-lbl');
+                    var totalNum = document.getElementById('dr-pair-total');
+                    if (p1Num) p1Num.textContent = String(p1Correct) + '/' + String(p1Skipped);
+                    if (p2Num) p2Num.textContent = String(p2Correct) + '/' + String(p2Skipped);
+                    if (p1Lbl) p1Lbl.textContent = p1.label || 'Первый Игрок';
+                    if (p2Lbl) p2Lbl.textContent = p2.label || 'Второй Игрок';
+                    if (totalNum) {
+                        totalNum.textContent =
+                            r.finalScore != null
+                                ? String(r.finalScore)
+                                : String((Number(p1.score) || 0) + (Number(p2.score) || 0));
+                    }
+                    var pairMetaParts = [];
+                    if (r.category) pairMetaParts.push('Категория: ' + r.category);
+                    resultsMeta.textContent = pairMetaParts.join(' · ');
+                } else {
+                    if (cardsClassic) cardsClassic.classList.remove('hidden');
+                    if (cardsPair) cardsPair.classList.add('hidden');
+                    drFinal.textContent = r.finalScore != null ? String(r.finalScore) : '0';
+                    drCorrectN.textContent = r.correct != null ? String(r.correct) : '0';
+                    drSkippedN.textContent = r.skipped != null ? String(r.skipped) : '0';
+                    var metaParts = [];
+                    if (r.duration) metaParts.push('Время: ' + r.duration);
+                    if (r.category) metaParts.push('Категория: ' + r.category);
+                    resultsMeta.textContent = metaParts.join(' · ');
                 }
-                if (r.duration) metaParts.push('Время: ' + r.duration);
-                if (r.category) metaParts.push('Категория: ' + r.category);
-                resultsMeta.textContent = metaParts.join(' · ');
                 fillWordTags(drCorrect, r.correctWords, '');
                 fillWordTags(drSkipped, r.skippedWords, 'skipped');
             } else if (r.variant === 'match') {

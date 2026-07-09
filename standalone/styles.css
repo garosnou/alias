@@ -740,6 +740,15 @@ body.standalone-host .container {
     opacity: 0.7;
 }
 
+.pair-leg-card--total {
+    border: 1px solid rgba(134, 239, 172, 0.35);
+    background: rgba(22, 101, 52, 0.22);
+}
+
+.pair-leg-card--total .pair-leg-score {
+    color: #86efac;
+}
+
 .pair-results-hint {
     margin: 1rem 0 0;
     font-size: 0.9rem;

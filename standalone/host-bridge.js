@@ -228,26 +228,44 @@
             var pairBd = document.getElementById('pair-results-breakdown');
             var isPair = pairBd && !pairBd.classList.contains('hidden');
             if (isPair) {
+                var pairLegsPayload = [];
+                try {
+                    var pgsRes = typeof pairGameState !== 'undefined' ? pairGameState : null;
+                    if (pgsRes && pgsRes.legs) {
+                        var labels = ['Первый Игрок', 'Второй Игрок'];
+                        for (var li = 0; li < 2; li++) {
+                            var lg = pgsRes.legs[li] || {};
+                            pairLegsPayload.push({
+                                label: labels[li],
+                                score: lg.score != null ? lg.score : 0,
+                                correct: lg.correctAnswers != null ? lg.correctAnswers : 0,
+                                skipped: lg.skippedWords != null ? lg.skippedWords : 0
+                            });
+                        }
+                    }
+                } catch (ePairRes) {}
+                if (!pairLegsPayload.length) {
+                    pairLegsPayload = [
+                        {
+                            label: 'Первый Игрок',
+                            score: safeText(document.getElementById('pair-leg1-score')) || '0',
+                            correct: 0,
+                            skipped: 0
+                        },
+                        {
+                            label: 'Второй Игрок',
+                            score: safeText(document.getElementById('pair-leg2-score')) || '0',
+                            correct: 0,
+                            skipped: 0
+                        }
+                    ];
+                }
                 return {
                     variant: 'pair-round',
                     title: safeText(document.getElementById('results-title')) || 'Результаты игры на двоих',
                     finalScore: safeText(document.getElementById('final-score')),
-                    correct: safeText(document.getElementById('correct-answers')),
-                    skipped: safeText(document.getElementById('skipped-words')),
-                    duration: safeText(document.getElementById('game-time-result')),
                     category: safeText(document.getElementById('game-category-result')),
-                    pairLegs: [
-                        {
-                            label: 'Первый Игрок',
-                            score: safeText(document.getElementById('pair-leg1-score')),
-                            meta: safeText(document.getElementById('pair-leg1-meta'))
-                        },
-                        {
-                            label: 'Второй Игрок',
-                            score: safeText(document.getElementById('pair-leg2-score')),
-                            meta: safeText(document.getElementById('pair-leg2-meta'))
-                        }
-                    ],
+                    pairLegs: pairLegsPayload,
                     correctWords: wordItemsFromList('correct-words-list'),
                     skippedWords: wordItemsFromList('skipped-words-list')
                 };

@@ -1128,6 +1128,20 @@ html, body {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.display-results-cards--pair.hidden,
+.display-results-cards.hidden {
+    display: none;
+}
+
+.display-res-card--total {
+    border-color: rgba(134, 239, 172, 0.45);
+    background: rgba(22, 101, 52, 0.28);
+}
+
+.display-res-card--total .display-res-num {
+    color: #86efac;
+}
+
 .display-res-num {
     font-size: clamp(2.2rem, 5vw, 3.5rem);
     font-weight: 800;
