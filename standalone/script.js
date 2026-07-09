@@ -1489,15 +1489,41 @@ function finalizePairLegOrShowResults() {
 }
 
 function showPairSwapScreen() {
-    const leg0 = pairGameState.legs[0];
+    const leg0 = pairGameState.legs[0] || {
+        score: 0,
+        correctAnswers: 0,
+        skippedWords: 0,
+        correctWords: [],
+        skippedWordsList: []
+    };
+    const correct = leg0.correctAnswers != null ? leg0.correctAnswers : 0;
+    const skipped = leg0.skippedWords != null ? leg0.skippedWords : 0;
+    const correctWords = Array.isArray(leg0.correctWords) ? leg0.correctWords : [];
+    const skippedWords = Array.isArray(leg0.skippedWordsList) ? leg0.skippedWordsList : [];
+
     const scoreEl = document.getElementById('pair-swap-leg1-score');
     const metaEl = document.getElementById('pair-swap-leg1-meta');
-    if (scoreEl && leg0) scoreEl.textContent = String(leg0.score);
-    if (metaEl && leg0) {
-        const correct = leg0.correctAnswers != null ? leg0.correctAnswers : 0;
-        const skipped = leg0.skippedWords != null ? leg0.skippedWords : 0;
-        metaEl.textContent = `${correct} угадано, ${skipped} пропущено`;
+    if (scoreEl) scoreEl.textContent = String(leg0.score != null ? leg0.score : 0);
+    if (metaEl) metaEl.textContent = `${correct} угадано · ${skipped} пропущено`;
+
+    const correctCountEl = document.getElementById('pair-swap-correct-count');
+    const skippedCountEl = document.getElementById('pair-swap-skipped-count');
+    if (correctCountEl) correctCountEl.textContent = String(correctWords.length);
+    if (skippedCountEl) skippedCountEl.textContent = String(skippedWords.length);
+
+    const correctListEl = document.getElementById('pair-swap-correct-words');
+    const skippedListEl = document.getElementById('pair-swap-skipped-words');
+    if (correctListEl) {
+        correctListEl.innerHTML = correctWords.length
+            ? correctWords.map((w) => `<span class="word-item correct">${w}</span>`).join('')
+            : '<span class="no-words">Нет отгаданных слов</span>';
     }
+    if (skippedListEl) {
+        skippedListEl.innerHTML = skippedWords.length
+            ? skippedWords.map((w) => `<span class="word-item skipped">${w}</span>`).join('')
+            : '<span class="no-words">Нет пропущенных слов</span>';
+    }
+
     showScreen('pair-swap-screen');
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
 }

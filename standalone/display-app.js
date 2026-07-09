@@ -14,7 +14,11 @@
     var pairSwapEl = document.getElementById('display-pair-swap');
     var pairSwapPlayerEl = document.getElementById('display-pair-swap-player');
     var pairSwapHintEl = document.getElementById('display-pair-swap-hint');
-    var pairSwapScoreEl = document.getElementById('display-pair-swap-score');
+    var pairSwapScoreNumEl = document.getElementById('display-pair-swap-score-num');
+    var pairSwapCorrectNEl = document.getElementById('display-pair-swap-correct-n');
+    var pairSwapSkippedNEl = document.getElementById('display-pair-swap-skipped-n');
+    var pairSwapCorrectEl = document.getElementById('display-pair-swap-correct');
+    var pairSwapSkippedEl = document.getElementById('display-pair-swap-skipped');
     var themeBannerEl = document.getElementById('display-theme-banner');
     var pairBannerEl = document.getElementById('display-pair-banner');
     var themePickerEl = document.getElementById('display-theme-picker');
@@ -964,18 +968,14 @@
                         ? 'Тема: ' + state.themeName + ' · ожидание готовности второго игрока'
                         : 'Ожидание готовности второго игрока';
                 }
-                if (pairSwapScoreEl) {
-                    var correct = ps.leg1Correct != null ? ps.leg1Correct : null;
-                    var skipped = ps.leg1Skipped != null ? ps.leg1Skipped : null;
-                    if (correct != null && skipped != null) {
-                        pairSwapScoreEl.textContent =
-                            correct + ' угадано, ' + skipped + ' пропущено';
-                    } else if (ps.leg1Meta) {
-                        pairSwapScoreEl.textContent = ps.leg1Meta;
-                    } else {
-                        pairSwapScoreEl.textContent = '0 угадано, 0 пропущено';
-                    }
-                }
+                var correct = ps.leg1Correct != null ? ps.leg1Correct : 0;
+                var skipped = ps.leg1Skipped != null ? ps.leg1Skipped : 0;
+                var score = ps.leg1Score != null ? ps.leg1Score : 0;
+                if (pairSwapScoreNumEl) pairSwapScoreNumEl.textContent = String(score);
+                if (pairSwapCorrectNEl) pairSwapCorrectNEl.textContent = String(correct);
+                if (pairSwapSkippedNEl) pairSwapSkippedNEl.textContent = String(skipped);
+                fillWordTags(pairSwapCorrectEl, ps.correctWords || [], '');
+                fillWordTags(pairSwapSkippedEl, ps.skippedWords || [], 'skipped');
             }
             applyGameBannerToDom(null);
             return;

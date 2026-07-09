@@ -410,13 +410,30 @@ body.standalone-host .container {
     color: #fff;
 }
 
-.pair-swap-summary p {
-    margin: 0 0 0.35rem;
+.pair-swap-words {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    text-align: left;
 }
 
-.pair-swap-meta {
-    opacity: 0.85;
+@media (max-width: 640px) {
+    .pair-swap-words {
+        grid-template-columns: 1fr;
+    }
+}
+
+.pair-swap-words-h3 {
+    margin: 0 0 0.5rem;
     font-size: 0.95rem;
+    font-weight: 700;
+    opacity: 0.95;
+}
+
+.pair-swap-words .words-container {
+    max-height: 12rem;
+    overflow-y: auto;
 }
 
 .pair-swap-actions {

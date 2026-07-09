@@ -27,7 +27,30 @@
             <p class="display-prep-label">Смена объясняющего</p>
             <div class="display-prep-name" id="display-pair-swap-player">Второй Игрок</div>
             <p class="display-pair-swap-hint" id="display-pair-swap-hint">Ожидание готовности второго игрока</p>
-            <div class="display-pair-swap-score" id="display-pair-swap-score" aria-live="polite"></div>
+            <div class="display-pair-swap-scoreboard" aria-live="polite">
+                <div class="display-res-card display-res-card--total">
+                    <div class="display-res-num" id="display-pair-swap-score-num">0</div>
+                    <div class="display-res-lbl">Счёт первого игрока</div>
+                </div>
+                <div class="display-res-card">
+                    <div class="display-res-num" id="display-pair-swap-correct-n">0</div>
+                    <div class="display-res-lbl">Угадано</div>
+                </div>
+                <div class="display-res-card">
+                    <div class="display-res-num" id="display-pair-swap-skipped-n">0</div>
+                    <div class="display-res-lbl">Пропущено</div>
+                </div>
+            </div>
+            <div class="display-results-columns display-pair-swap-words">
+                <div class="display-results-col">
+                    <h3 class="display-results-h3">Отгаданные</h3>
+                    <div id="display-pair-swap-correct" class="display-word-tags"></div>
+                </div>
+                <div class="display-results-col">
+                    <h3 class="display-results-h3">Пропущенные</h3>
+                    <div id="display-pair-swap-skipped" class="display-word-tags"></div>
+                </div>
+            </div>
         </div>
 
         <div id="display-theme-picker" class="display-theme-picker hidden" aria-live="polite">

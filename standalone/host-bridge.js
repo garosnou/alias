@@ -522,12 +522,20 @@
                     var leg0Swap = pgs.legs[0];
                     var correctSwap = leg0Swap.correctAnswers != null ? leg0Swap.correctAnswers : 0;
                     var skippedSwap = leg0Swap.skippedWords != null ? leg0Swap.skippedWords : 0;
+                    var correctWordsSwap = Array.isArray(leg0Swap.correctWords)
+                        ? leg0Swap.correctWords.slice()
+                        : [];
+                    var skippedWordsSwap = Array.isArray(leg0Swap.skippedWordsList)
+                        ? leg0Swap.skippedWordsList.slice()
+                        : [];
                     pairSwap = {
                         nextPlayerLabel: 'Второй Игрок',
                         leg1Score: leg0Swap.score != null ? leg0Swap.score : 0,
                         leg1Correct: correctSwap,
                         leg1Skipped: skippedSwap,
-                        leg1Meta: correctSwap + ' угадано, ' + skippedSwap + ' пропущено'
+                        leg1Meta: correctSwap + ' угадано, ' + skippedSwap + ' пропущено',
+                        correctWords: correctWordsSwap,
+                        skippedWords: skippedWordsSwap
                     };
                 }
             }
