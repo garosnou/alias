@@ -322,6 +322,8 @@
         });
         if (gameEl) gameEl.classList.toggle('display-game--theme-cover', !!src);
         if (pausedEl) pausedEl.classList.toggle('display-paused--theme-cover', !!src);
+        var root = document.getElementById('display-root');
+        if (root) root.classList.toggle('display-root--theme-cover', !!src);
         lastThemeCoverApplied = src;
     }
 

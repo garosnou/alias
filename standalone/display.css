@@ -104,23 +104,25 @@ html, body {
     align-items: stretch;
 }
 
-/* Обложка темы на весь экран — без зазора, где просвечивает фиолетовый фон body */
+/* Без padding корня — иначе вокруг обложки виден фиолетовый фон body */
+#display-root.display-root--theme-cover {
+    padding: 0;
+}
+
 .display-game.display-game--theme-cover {
+    --display-root-pad: 0px;
+    padding: clamp(14px, 2.2vw, 28px) clamp(14px, 3vw, 36px);
+}
+
+.display-game.display-game--theme-cover .display-game-theme-bg {
     position: fixed;
     inset: 0;
-    z-index: 1;
-    width: 100%;
-    max-width: none;
-    min-height: 100vh;
-    min-height: 100dvh;
-    height: 100vh;
-    height: 100dvh;
-    max-height: none;
-    padding: clamp(14px, 2.2vw, 28px) clamp(14px, 3vw, 36px);
-    box-sizing: border-box;
+    z-index: 0;
 }
 
 .display-game.display-game--theme-cover .display-game-panel {
+    position: relative;
+    z-index: 1;
     background: rgba(15, 23, 42, 0.62);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -128,14 +130,6 @@ html, body {
     border-radius: 22px;
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
     overflow: hidden;
-}
-
-.display-game.display-game--theme-cover.display-game--has-banner {
-    bottom: var(--hall-banner-height, 0px);
-    height: auto;
-    min-height: 0;
-    max-height: none;
-    padding: clamp(14px, 2.2vw, 28px) clamp(14px, 3vw, 36px) clamp(10px, 1.5vw, 18px);
 }
 
 .display-game.display-game--theme-cover.display-game--has-banner .display-game-panel {
@@ -890,8 +884,9 @@ html, body {
 }
 
 .display-paused.display-paused--theme-cover .display-game-theme-bg {
-    position: absolute;
+    position: fixed;
     inset: 0;
+    z-index: 0;
 }
 
 .display-paused-panel {
