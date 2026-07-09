@@ -924,11 +924,16 @@
                         : 'Ожидание готовности второго игрока';
                 }
                 if (pairSwapScoreEl) {
-                    var sc = ps.leg1Score != null ? ps.leg1Score : 0;
-                    var meta = ps.leg1Meta || '';
-                    pairSwapScoreEl.textContent = meta
-                        ? 'Первый Игрок: ' + sc + ' очков · ' + meta
-                        : 'Первый Игрок: ' + sc + ' очков';
+                    var correct = ps.leg1Correct != null ? ps.leg1Correct : null;
+                    var skipped = ps.leg1Skipped != null ? ps.leg1Skipped : null;
+                    if (correct != null && skipped != null) {
+                        pairSwapScoreEl.textContent =
+                            correct + ' угадано, ' + skipped + ' пропущено';
+                    } else if (ps.leg1Meta) {
+                        pairSwapScoreEl.textContent = ps.leg1Meta;
+                    } else {
+                        pairSwapScoreEl.textContent = '0 угадано, 0 пропущено';
+                    }
                 }
             }
             applyGameBannerToDom(null);

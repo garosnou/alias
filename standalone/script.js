@@ -1494,7 +1494,9 @@ function showPairSwapScreen() {
     const metaEl = document.getElementById('pair-swap-leg1-meta');
     if (scoreEl && leg0) scoreEl.textContent = String(leg0.score);
     if (metaEl && leg0) {
-        metaEl.textContent = `${leg0.correctAnswers} угадано · ${leg0.duration} с`;
+        const correct = leg0.correctAnswers != null ? leg0.correctAnswers : 0;
+        const skipped = leg0.skippedWords != null ? leg0.skippedWords : 0;
+        metaEl.textContent = `${correct} угадано, ${skipped} пропущено`;
     }
     showScreen('pair-swap-screen');
     if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);

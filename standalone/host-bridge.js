@@ -493,14 +493,15 @@
                     playerLabel: legNum === 1 ? 'Первый Игрок' : 'Второй Игрок'
                 };
                 if (screenId === 'pair-swap-screen' && pgs.legs && pgs.legs[0]) {
+                    var leg0Swap = pgs.legs[0];
+                    var correctSwap = leg0Swap.correctAnswers != null ? leg0Swap.correctAnswers : 0;
+                    var skippedSwap = leg0Swap.skippedWords != null ? leg0Swap.skippedWords : 0;
                     pairSwap = {
                         nextPlayerLabel: 'Второй Игрок',
-                        leg1Score: pgs.legs[0].score != null ? pgs.legs[0].score : 0,
-                        leg1Meta:
-                            (pgs.legs[0].correctAnswers != null ? pgs.legs[0].correctAnswers : 0) +
-                            ' угадано · ' +
-                            (pgs.legs[0].duration != null ? pgs.legs[0].duration : 0) +
-                            ' с'
+                        leg1Score: leg0Swap.score != null ? leg0Swap.score : 0,
+                        leg1Correct: correctSwap,
+                        leg1Skipped: skippedSwap,
+                        leg1Meta: correctSwap + ' угадано, ' + skippedSwap + ' пропущено'
                     };
                 }
             }
