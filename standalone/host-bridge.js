@@ -239,7 +239,11 @@
                                 label: labels[li],
                                 score: lg.score != null ? lg.score : 0,
                                 correct: lg.correctAnswers != null ? lg.correctAnswers : 0,
-                                skipped: lg.skippedWords != null ? lg.skippedWords : 0
+                                skipped: lg.skippedWords != null ? lg.skippedWords : 0,
+                                correctWords: Array.isArray(lg.correctWords) ? lg.correctWords.slice() : [],
+                                skippedWords: Array.isArray(lg.skippedWordsList)
+                                    ? lg.skippedWordsList.slice()
+                                    : []
                             });
                         }
                     }
@@ -250,13 +254,17 @@
                             label: 'Первый Игрок',
                             score: safeText(document.getElementById('pair-leg1-score')) || '0',
                             correct: 0,
-                            skipped: 0
+                            skipped: 0,
+                            correctWords: [],
+                            skippedWords: []
                         },
                         {
                             label: 'Второй Игрок',
                             score: safeText(document.getElementById('pair-leg2-score')) || '0',
                             correct: 0,
-                            skipped: 0
+                            skipped: 0,
+                            correctWords: [],
+                            skippedWords: []
                         }
                     ];
                 }

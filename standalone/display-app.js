@@ -400,11 +400,52 @@
     function fillWordTags(container, words, tagClass) {
         if (!container) return;
         container.textContent = '';
+        container.classList.remove('display-word-tags--pair');
         (words || []).forEach(function (w) {
             var s = document.createElement('span');
             s.className = 'tag' + (tagClass ? ' ' + tagClass : '');
             s.textContent = w;
             container.appendChild(s);
+        });
+    }
+
+    function fillPairWordTags(container, legs, listKey, tagClass) {
+        if (!container) return;
+        container.textContent = '';
+        container.classList.add('display-word-tags--pair');
+        var list = Array.isArray(legs) ? legs : [];
+        if (!list.length) {
+            var empty = document.createElement('span');
+            empty.className = 'display-pair-words-empty';
+            empty.textContent = 'нет';
+            container.appendChild(empty);
+            return;
+        }
+        list.forEach(function (leg, idx) {
+            var block = document.createElement('div');
+            block.className = 'display-pair-words-leg';
+            var label = document.createElement('div');
+            label.className = 'display-pair-words-label';
+            label.textContent = (leg && leg.label) || (idx === 0 ? 'Первый Игрок' : 'Второй Игрок');
+            block.appendChild(label);
+            var tags = document.createElement('div');
+            tags.className = 'display-pair-words-tags';
+            var words = leg && Array.isArray(leg[listKey]) ? leg[listKey] : [];
+            if (!words.length) {
+                var none = document.createElement('span');
+                none.className = 'display-pair-words-empty';
+                none.textContent = 'нет';
+                tags.appendChild(none);
+            } else {
+                words.forEach(function (w) {
+                    var s = document.createElement('span');
+                    s.className = 'tag' + (tagClass ? ' ' + tagClass : '');
+                    s.textContent = w;
+                    tags.appendChild(s);
+                });
+            }
+            block.appendChild(tags);
+            container.appendChild(block);
         });
     }
 
@@ -1230,8 +1271,13 @@
                     if (r.category) metaParts.push('Категория: ' + r.category);
                     resultsMeta.textContent = metaParts.join(' · ');
                 }
-                fillWordTags(drCorrect, r.correctWords, '');
-                fillWordTags(drSkipped, r.skippedWords, 'skipped');
+                if (r.variant === 'pair-round' && r.pairLegs && r.pairLegs.length) {
+                    fillPairWordTags(drCorrect, r.pairLegs, 'correctWords', '');
+                    fillPairWordTags(drSkipped, r.pairLegs, 'skippedWords', 'skipped');
+                } else {
+                    fillWordTags(drCorrect, r.correctWords, '');
+                    fillWordTags(drSkipped, r.skippedWords, 'skipped');
+                }
             } else if (r.variant === 'match') {
                 renderMatchResults(r);
             } else if (r.variant === 'competitive') {
