@@ -813,30 +813,23 @@ function renderCustomPackList() {
 }
 
 function updateCustomPackCoverRow() {
-    const row = document.getElementById('custom-pack-cover-row');
-    const thumb = document.getElementById('custom-pack-cover-thumb');
-    const btn = document.getElementById('custom-pack-cover-btn');
-    const note = document.getElementById('custom-pack-cover-note');
-    if (!row) return;
-    const hasPacks = !!(CUSTOM_WORDS && CUSTOM_WORDS.length);
-    row.classList.toggle('hidden', !hasPacks);
+    const preview = document.getElementById('custom-pack-cover-preview');
+    const clearBtn = document.getElementById('custom-pack-cover-clear');
     const cover = customCoverFromMeta(CUSTOM_WORDS_META);
-    if (thumb) {
-        if (cover) {
-            thumb.style.backgroundImage = `url("${cover.replace(/"/g, '%22')}")`;
-            thumb.classList.remove('theme-cover-thumb--empty');
-        } else {
-            thumb.style.backgroundImage = '';
-            thumb.classList.add('theme-cover-thumb--empty');
-        }
+    if (clearBtn) clearBtn.disabled = !cover;
+    if (!preview) return;
+    preview.innerHTML = '';
+    if (!cover) {
+        preview.classList.add('hidden');
+        preview.setAttribute('aria-hidden', 'true');
+        return;
     }
-    if (btn) {
-        btn.textContent = cover ? 'Убрать обложку' : 'Обложка';
-        btn.onclick = cover ? clearCustomPackCover : pickCustomPackCover;
-    }
-    if (note) {
-        note.textContent = cover ? 'Фон экрана зала · обложка задана' : 'Фон игрового экрана зала';
-    }
+    const img = document.createElement('img');
+    img.alt = 'Обложка пакета';
+    img.src = cover;
+    preview.appendChild(img);
+    preview.classList.remove('hidden');
+    preview.setAttribute('aria-hidden', 'false');
 }
 
 function syncCustomCoverToActiveGame() {

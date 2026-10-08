@@ -51,7 +51,7 @@
                     <label><input type="radio" name="word-source" id="source-themes" value="themes"> По темам</label>
                 </div>
                 <p class="hint" id="word-source-hint-builtin">Встроенные слова — категории из списка ниже.</p>
-                <p class="hint hidden" id="word-source-hint-custom">Пользовательские слова: один или несколько файлов <code>.txt</code> (по одному слову в строке). Все файлы объединяются в один пакет. Обложку пакета можно задать так же, как у темы.</p>
+                <p class="hint hidden" id="word-source-hint-custom">Пользовательские слова: один или несколько файлов <code>.txt</code> (по одному слову в строке). Все файлы объединяются в один пакет. Для пакета можно задать обложку — фон игрового экрана зала.</p>
                 <p class="hint hidden" id="word-source-hint-themes">По темам: каждый файл <code>.txt</code> — отдельная тема. Перед игрой выберите тему из загруженных.</p>
             </div>
 
@@ -64,15 +64,16 @@
                     <button type="button" class="btn btn-secondary" id="export-unused-words-btn" disabled>Выгрузить неиспользованные</button>
                     <button type="button" class="btn btn-secondary" id="clear-pack-btn">Очистить всё</button>
                 </div>
-                <p class="hint custom-pack-export-hint">«Загрузить» — заменить все пакеты и сбросить прогресс по словам. «Добавить» — дописать файлы к уже загруженным, прогресс сохраняется. Обложка — фон игрового экрана зала, как у темы.</p>
+                <p class="hint custom-pack-export-hint">«Загрузить» — заменить все пакеты и сбросить прогресс по словам. «Добавить» — дописать файлы к уже загруженным, прогресс сохраняется.</p>
                 <ul id="custom-pack-list" class="custom-pack-list hidden" aria-label="Загруженные пакеты"></ul>
-                <div id="custom-pack-cover-row" class="theme-pack-item custom-pack-cover-row hidden">
-                    <span id="custom-pack-cover-thumb" class="theme-cover-thumb theme-cover-thumb--empty" aria-hidden="true"></span>
-                    <span class="theme-pack-item-main">
-                        <span class="custom-pack-list-name">Обложка пакета</span>
-                        <span class="custom-pack-list-count" id="custom-pack-cover-note">Фон игрового экрана зала</span>
-                    </span>
-                    <button type="button" class="btn btn-secondary theme-pack-btn" id="custom-pack-cover-btn" onclick="pickCustomPackCover()">Обложка</button>
+                <div id="custom-pack-cover-block" class="custom-pack-cover-block">
+                    <label>Обложка пакета:</label>
+                    <p class="hint">Картинка на фоне игрового экрана зала, пока идёт игра с этим пакетом.</p>
+                    <div class="game-banner-settings-actions">
+                        <button type="button" class="btn btn-secondary" id="custom-pack-cover-pick" onclick="pickCustomPackCover()">Выбрать изображение</button>
+                        <button type="button" class="btn btn-secondary" id="custom-pack-cover-clear" onclick="clearCustomPackCover()" disabled>Убрать обложку</button>
+                    </div>
+                    <div id="custom-pack-cover-preview" class="game-banner-preview hidden" aria-hidden="true"></div>
                 </div>
                 <div class="pack-status" id="custom-pack-status">Пакеты не загружены</div>
                 <input type="file" id="custom-pack-cover-input" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,.jpg,.jpeg,.png,.webp,.gif" hidden>
