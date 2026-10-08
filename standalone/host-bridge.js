@@ -234,16 +234,29 @@
                     if (pgsRes && pgsRes.legs) {
                         var labels = ['Первый Игрок', 'Второй Игрок'];
                         for (var li = 0; li < 2; li++) {
-                            var lg = pgsRes.legs[li] || {};
+                            var accScore = 0;
+                            var accCorrect = 0;
+                            var accSkipped = 0;
+                            var accCorrectWords = [];
+                            var accSkippedWords = [];
+                            for (var legi = li; legi < pgsRes.legs.length; legi += 2) {
+                                var lg = pgsRes.legs[legi];
+                                if (!lg) continue;
+                                accScore += lg.score != null ? Number(lg.score) || 0 : 0;
+                                accCorrect += lg.correctAnswers != null ? Number(lg.correctAnswers) || 0 : 0;
+                                accSkipped += lg.skippedWords != null ? Number(lg.skippedWords) || 0 : 0;
+                                if (Array.isArray(lg.correctWords)) accCorrectWords = accCorrectWords.concat(lg.correctWords);
+                                if (Array.isArray(lg.skippedWordsList)) {
+                                    accSkippedWords = accSkippedWords.concat(lg.skippedWordsList);
+                                }
+                            }
                             pairLegsPayload.push({
                                 label: labels[li],
-                                score: lg.score != null ? lg.score : 0,
-                                correct: lg.correctAnswers != null ? lg.correctAnswers : 0,
-                                skipped: lg.skippedWords != null ? lg.skippedWords : 0,
-                                correctWords: Array.isArray(lg.correctWords) ? lg.correctWords.slice() : [],
-                                skippedWords: Array.isArray(lg.skippedWordsList)
-                                    ? lg.skippedWordsList.slice()
-                                    : []
+                                score: accScore,
+                                correct: accCorrect,
+                                skipped: accSkipped,
+                                correctWords: accCorrectWords,
+                                skippedWords: accSkippedWords
                             });
                         }
                     }
@@ -387,6 +400,8 @@
             phase = 'paused';
         } else if (screenId === 'pair-swap-screen') {
             phase = 'pair-swap';
+        } else if (screenId === 'pair-lobby') {
+            phase = 'prep';
         } else if (screenId === 'theme-picker') {
             phase = 'theme-picker';
         } else if (screenId === 'tournament-match') {
@@ -487,7 +502,8 @@
         if (typeof activeThemeId !== 'undefined' && activeThemeId && typeof getThemeById === 'function') {
             var th = getThemeById(activeThemeId);
             if (th) {
-                if (!themeName && th.name) themeName = String(th.name);
+                if (screenId === 'pair-lobby' && th.name) themeName = String(th.name);
+                else if (!themeName && th.name) themeName = String(th.name);
                 if (!themeCover && th.cover) themeCover = String(th.cover);
             }
         }
@@ -512,25 +528,36 @@
         try {
             var pgs = typeof pairGameState !== 'undefined' ? pairGameState : null;
             if (pgs && pgs.mode === 'pair') {
-                var legNum = (pgs.currentLeg || 0) + 1;
+                var turnIdx = pgs.currentLeg || 0;
+                var playerNum = (turnIdx % 2) + 1;
+                var circlesN = 1;
+                if (typeof pairCircleCount === 'function') circlesN = pairCircleCount();
+                else if (pgs.circles) circlesN = parseInt(pgs.circles, 10) || 1;
+                var totalTurns = typeof pairTotalTurns === 'function' ? pairTotalTurns() : circlesN * 2;
                 pairGame = {
-                    leg: legNum,
-                    totalLegs: 2,
-                    playerLabel: legNum === 1 ? 'Первый Игрок' : 'Второй Игрок'
+                    leg: playerNum,
+                    totalLegs: totalTurns,
+                    circles: circlesN,
+                    circle: Math.floor(turnIdx / 2) + 1,
+                    playerLabel: playerNum === 1 ? 'Первый Игрок' : 'Второй Игрок'
                 };
-                if (screenId === 'pair-swap-screen' && pgs.legs && pgs.legs[0]) {
-                    var leg0Swap = pgs.legs[0];
-                    var correctSwap = leg0Swap.correctAnswers != null ? leg0Swap.correctAnswers : 0;
-                    var skippedSwap = leg0Swap.skippedWords != null ? leg0Swap.skippedWords : 0;
-                    var correctWordsSwap = Array.isArray(leg0Swap.correctWords)
-                        ? leg0Swap.correctWords.slice()
+                if (screenId === 'pair-swap-screen' && pgs.legs && pgs.legs.length) {
+                    var prevIdx = Math.max(0, turnIdx - 1);
+                    var legPrev = pgs.legs[prevIdx] || {};
+                    var finishedLabel = prevIdx % 2 === 0 ? 'Первый Игрок' : 'Второй Игрок';
+                    var nextLabel = turnIdx % 2 === 0 ? 'Первый Игрок' : 'Второй Игрок';
+                    var correctSwap = legPrev.correctAnswers != null ? legPrev.correctAnswers : 0;
+                    var skippedSwap = legPrev.skippedWords != null ? legPrev.skippedWords : 0;
+                    var correctWordsSwap = Array.isArray(legPrev.correctWords)
+                        ? legPrev.correctWords.slice()
                         : [];
-                    var skippedWordsSwap = Array.isArray(leg0Swap.skippedWordsList)
-                        ? leg0Swap.skippedWordsList.slice()
+                    var skippedWordsSwap = Array.isArray(legPrev.skippedWordsList)
+                        ? legPrev.skippedWordsList.slice()
                         : [];
                     pairSwap = {
-                        nextPlayerLabel: 'Второй Игрок',
-                        leg1Score: leg0Swap.score != null ? leg0Swap.score : 0,
+                        nextPlayerLabel: nextLabel,
+                        finishedLabel: finishedLabel,
+                        leg1Score: legPrev.score != null ? legPrev.score : 0,
                         leg1Correct: correctSwap,
                         leg1Skipped: skippedSwap,
                         leg1Meta: correctSwap + ' угадано, ' + skippedSwap + ' пропущено',
@@ -542,9 +569,16 @@
         } catch (ePair) {}
 
         var prepTitle = '';
+        var prepNameOut = safeText(document.getElementById('prep-player-name'));
+        var prepCountOut = safeText(document.getElementById('prep-countdown'));
         if (prep) {
             var ptEl = prep.querySelector('.prep-title');
             prepTitle = ptEl ? safeText(ptEl) : '';
+        }
+        if (screenId === 'pair-lobby') {
+            prepTitle = 'Подготовка';
+            prepNameOut = 'Первый Игрок';
+            prepCountOut = 'Ожидание старта';
         }
 
         return {
@@ -559,8 +593,8 @@
                 wordNumber: wordNumForHall,
                 correctCount: gs && gs.correctAnswers != null ? gs.correctAnswers : 0,
                 skippedCount: gs && gs.skippedWords != null ? gs.skippedWords : 0,
-                prepCountdown: safeText(document.getElementById('prep-countdown')),
-                prepName: safeText(document.getElementById('prep-player-name')),
+                prepCountdown: prepCountOut,
+                prepName: prepNameOut,
                 prepTitle: prepTitle,
                 themeName: themeName,
                 themeCover: themeCover,

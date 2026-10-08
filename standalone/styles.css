@@ -414,6 +414,20 @@ body.standalone-host .container {
     justify-content: center;
 }
 
+.pair-lobby-settings {
+    margin: 0 auto 1.5rem;
+    max-width: 32rem;
+    text-align: left;
+    padding: 1.25rem 1.15rem 0.35rem;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.pair-lobby-settings .hint {
+    margin-top: 0.35rem;
+}
+
 .pair-swap-shell {
     text-align: center;
 }

@@ -74,11 +74,16 @@ let competitiveState = {
     prepTimer: null
 };
 
-/** Обычная игра на пару: два раунда подряд, общий счёт */
+/** Обычная игра на пару: игроки чередуются, общий счёт — сумма ходов */
+const PAIR_MAX_CIRCLES = 20;
 let pairGameState = {
     mode: null, // null | 'pair'
-    currentLeg: 0, // 0 | 1
-    legs: [null, null]
+    currentLeg: 0,
+    legs: [],
+    /** Сколько раз каждый игрок объясняет */
+    circles: 1,
+    /** 0 = без лимита; иначе макс. пропусков за ход одного игрока */
+    maxSkipsPerPlayer: 0
 };
 
 /** Гибкий турнир: пул команд, раунды по 1–16 команд */
@@ -644,7 +649,7 @@ function showThemePicker() {
     if (lead) {
         lead.textContent =
             pendingGameStart === 'pair'
-                ? 'Одна тема на оба раунда. Нажмите на тему, чтобы начать. Выбор виден и на экране зала.'
+                ? 'Одна тема на всю игру. После выбора откроется подготовка первого игрока. Выбор виден и на экране зала.'
                 : 'Нажмите на тему, чтобы начать игру. Выбор виден и на экране зала.';
     }
     renderThemePickerList();
@@ -671,13 +676,13 @@ function pickThemeAndStart(themeId) {
     const action = pendingGameStart || 'single';
     pendingGameStart = null;
     if (action === 'pair') {
-        pairGameState.mode = 'pair';
-        pairGameState.currentLeg = 0;
-        pairGameState.legs = [null, null];
-    } else if (action !== 'resume') {
+        showPairLobby();
+        return;
+    }
+    if (action !== 'resume') {
         pairGameState.mode = null;
         pairGameState.currentLeg = 0;
-        pairGameState.legs = [null, null];
+        pairGameState.legs = [];
     }
     startGame();
 }
@@ -1428,7 +1433,7 @@ function showMainMenu() {
     flexibleTournamentState.isFlexibleMode = false;
     pairGameState.mode = null;
     pairGameState.currentLeg = 0;
-    pairGameState.legs = [null, null];
+    pairGameState.legs = [];
     const sb = document.getElementById('competitive-scoreboard');
     if (sb) sb.style.display = 'none';
     const prep = document.getElementById('competitive-prep');
@@ -1449,16 +1454,95 @@ function startSingleGame() {
     if (!ensureThemeSelectedForGame('single')) return;
     pairGameState.mode = null;
     pairGameState.currentLeg = 0;
-    pairGameState.legs = [null, null];
+    pairGameState.legs = [];
     startGame();
+}
+
+function pairCircleCount() {
+    const c = parseInt(pairGameState.circles, 10);
+    if (Number.isNaN(c) || c < 1) return 1;
+    return Math.min(c, PAIR_MAX_CIRCLES);
+}
+
+function pairTotalTurns() {
+    return pairCircleCount() * 2;
+}
+
+function pairPlayerLabel(playerIndex) {
+    return playerIndex % 2 === 0 ? 'Первый Игрок' : 'Второй Игрок';
+}
+
+function emptyPairLeg() {
+    return {
+        score: 0,
+        correctAnswers: 0,
+        skippedWords: 0,
+        correctWords: [],
+        skippedWordsList: [],
+        duration: 0
+    };
+}
+
+function aggregatePairPlayer(playerIndex) {
+    const acc = emptyPairLeg();
+    const legs = pairGameState.legs || [];
+    for (let i = playerIndex; i < legs.length; i += 2) {
+        const leg = legs[i];
+        if (!leg) continue;
+        acc.score += leg.score || 0;
+        acc.correctAnswers += leg.correctAnswers || 0;
+        acc.skippedWords += leg.skippedWords || 0;
+        acc.duration += leg.duration || 0;
+        if (Array.isArray(leg.correctWords)) acc.correctWords.push(...leg.correctWords);
+        if (Array.isArray(leg.skippedWordsList)) acc.skippedWordsList.push(...leg.skippedWordsList);
+    }
+    return acc;
+}
+
+function readPairLobbySettings() {
+    const ms = document.getElementById('pair-max-skips');
+    const rc = document.getElementById('pair-circles');
+    if (ms) {
+        const v = parseInt(ms.value, 10);
+        pairGameState.maxSkipsPerPlayer = !Number.isNaN(v) && v > 0 ? Math.min(v, 999) : 0;
+    }
+    if (rc) {
+        const c = parseInt(rc.value, 10);
+        pairGameState.circles = !Number.isNaN(c) && c >= 1 ? Math.min(c, PAIR_MAX_CIRCLES) : 1;
+    }
+}
+
+function showPairLobby() {
+    pairGameState.mode = 'pair';
+    pairGameState.currentLeg = 0;
+    pairGameState.legs = [];
+    const ms = document.getElementById('pair-max-skips');
+    const rc = document.getElementById('pair-circles');
+    if (ms) ms.value = pairGameState.maxSkipsPerPlayer > 0 ? String(pairGameState.maxSkipsPerPlayer) : '';
+    if (rc) rc.value = String(pairCircleCount());
+    showScreen('pair-lobby');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function confirmPairLobby() {
+    if (pairGameState.mode !== 'pair') pairGameState.mode = 'pair';
+    readPairLobbySettings();
+    pairGameState.currentLeg = 0;
+    pairGameState.legs = [];
+    startGame();
+}
+
+function cancelPairLobby() {
+    readPairLobbySettings();
+    pairGameState.mode = null;
+    pairGameState.currentLeg = 0;
+    pairGameState.legs = [];
+    showMainMenu();
 }
 
 function startPairGame() {
     if (!ensureThemeSelectedForGame('pair')) return;
-    pairGameState.mode = 'pair';
-    pairGameState.currentLeg = 0;
-    pairGameState.legs = [null, null];
-    startGame();
+    showPairLobby();
 }
 
 function snapshotPairLegFromGameState() {
@@ -1499,8 +1583,9 @@ function finalizePairLegOrShowResults() {
 
     pairGameState.legs[pairGameState.currentLeg] = legSnapshot;
 
-    if (pairGameState.currentLeg === 0) {
-        pairGameState.currentLeg = 1;
+    const nextLeg = pairGameState.currentLeg + 1;
+    if (nextLeg < pairTotalTurns()) {
+        pairGameState.currentLeg = nextLeg;
         showPairSwapScreen();
         return;
     }
@@ -1509,21 +1594,37 @@ function finalizePairLegOrShowResults() {
 }
 
 function showPairSwapScreen() {
-    const leg0 = pairGameState.legs[0] || {
-        score: 0,
-        correctAnswers: 0,
-        skippedWords: 0,
-        correctWords: [],
-        skippedWordsList: []
-    };
-    const correct = leg0.correctAnswers != null ? leg0.correctAnswers : 0;
-    const skipped = leg0.skippedWords != null ? leg0.skippedWords : 0;
-    const correctWords = Array.isArray(leg0.correctWords) ? leg0.correctWords : [];
-    const skippedWords = Array.isArray(leg0.skippedWordsList) ? leg0.skippedWordsList : [];
+    const finishedIndex = Math.max(0, pairGameState.currentLeg - 1);
+    const finished = pairGameState.legs[finishedIndex] || emptyPairLeg();
+    const finishedLabel = pairPlayerLabel(finishedIndex);
+    const nextLabel = pairPlayerLabel(pairGameState.currentLeg);
+    const circles = pairCircleCount();
+    const nextCircle = Math.floor(pairGameState.currentLeg / 2) + 1;
+    const correct = finished.correctAnswers != null ? finished.correctAnswers : 0;
+    const skipped = finished.skippedWords != null ? finished.skippedWords : 0;
+    const correctWords = Array.isArray(finished.correctWords) ? finished.correctWords : [];
+    const skippedWords = Array.isArray(finished.skippedWordsList) ? finished.skippedWordsList : [];
+
+    const titleEl = document.getElementById('pair-swap-title');
+    const leadEl = document.getElementById('pair-swap-lead');
+    const labelEl = document.getElementById('pair-swap-leg-label');
+    const startBtn = document.getElementById('pair-swap-start-btn');
+    if (titleEl) titleEl.textContent = 'Смена объясняющего';
+    if (labelEl) labelEl.textContent = finishedLabel;
+    if (leadEl) {
+        let circleNote = '';
+        if (circles > 1 && pairGameState.currentLeg % 2 === 0) {
+            circleNote = ` Дальше круг ${nextCircle} из ${circles}.`;
+        } else if (circles > 1) {
+            circleNote = ` Круг ${nextCircle} из ${circles}.`;
+        }
+        leadEl.textContent = `${finishedLabel} завершил ход.${circleNote} Когда ${nextLabel} готов — нажмите кнопку ниже (на экране зала тоже отображается ожидание).`;
+    }
+    if (startBtn) startBtn.textContent = `${nextLabel} готов — начать`;
 
     const scoreEl = document.getElementById('pair-swap-leg1-score');
     const metaEl = document.getElementById('pair-swap-leg1-meta');
-    if (scoreEl) scoreEl.textContent = String(leg0.score != null ? leg0.score : 0);
+    if (scoreEl) scoreEl.textContent = String(finished.score != null ? finished.score : 0);
     if (metaEl) metaEl.textContent = `${correct} угадано · ${skipped} пропущено`;
 
     const correctCountEl = document.getElementById('pair-swap-correct-count');
@@ -1549,26 +1650,19 @@ function showPairSwapScreen() {
 }
 
 function startPairLeg2() {
-    if (pairGameState.mode !== 'pair' || pairGameState.currentLeg !== 1) return;
+    if (pairGameState.mode !== 'pair') return;
+    if (pairGameState.currentLeg < 1 || pairGameState.currentLeg >= pairTotalTurns()) return;
     startGame();
 }
 
 function endPairGameEarly() {
     if (pairGameState.mode !== 'pair') return;
-    pairGameState.legs[1] = {
-        score: 0,
-        correctAnswers: 0,
-        skippedWords: 0,
-        correctWords: [],
-        skippedWordsList: [],
-        duration: 0
-    };
     showPairCombinedResults();
 }
 
 function showPairCombinedResults() {
-    const leg0 = pairGameState.legs[0] || { score: 0, correctAnswers: 0, skippedWords: 0, correctWords: [], skippedWordsList: [], duration: 0 };
-    const leg1 = pairGameState.legs[1] || { score: 0, correctAnswers: 0, skippedWords: 0, correctWords: [], skippedWordsList: [], duration: 0 };
+    const leg0 = aggregatePairPlayer(0);
+    const leg1 = aggregatePairPlayer(1);
     const totalScore = leg0.score + leg1.score;
     const totalCorrect = leg0.correctAnswers + leg1.correctAnswers;
     const totalSkipped = leg0.skippedWords + leg1.skippedWords;
@@ -1700,10 +1794,10 @@ function startGame() {
             showSettings();
             return;
         }
-        const isPairLeg2 =
-            pairGameState.mode === 'pair' && pairGameState.currentLeg === 1 && pairGameState.legs[0];
+        const isPairContinuation =
+            pairGameState.mode === 'pair' && pairGameState.currentLeg > 0 && pairGameState.legs[0];
         if (!activeThemeId || !getThemeById(activeThemeId)) {
-            if (!isPairLeg2) {
+            if (!isPairContinuation) {
                 if (!pendingGameStart) pendingGameStart = 'resume';
                 showThemePicker();
                 return;
@@ -1745,6 +1839,12 @@ function startGame() {
     let skipsRemaining = 0;
     if (flexibleTournamentState.isFlexibleMode) {
         const lim = parseInt(flexibleTournamentState.maxSkipsPerTurn, 10) || 0;
+        if (lim > 0) {
+            maxSkipsAllowed = lim;
+            skipsRemaining = lim;
+        }
+    } else if (pairGameState.mode === 'pair') {
+        const lim = parseInt(pairGameState.maxSkipsPerPlayer, 10) || 0;
         if (lim > 0) {
             maxSkipsAllowed = lim;
             skipsRemaining = lim;
@@ -1823,24 +1923,16 @@ function startGame() {
     if (competitiveState.isCompetitiveMode) {
         // перед стартом даем 3 секунды подготовки
         startCompetitivePreparation();
+    } else if (pairGameState.mode === 'pair') {
+        startTimer();
+        showCurrentWord();
     } else {
         const ftTurn = flexibleTournamentState.isFlexibleMode ? getFlexibleCurrentTurn() : null;
-        let prepLabel = ftTurn ? `${ftTurn.team.name} — ${ftTurn.playerName}` : null;
-        let prepOptions = null;
-        let prepSeconds = 3;
-        if (pairGameState.mode === 'pair') {
-            if (pairGameState.currentLeg === 0) {
-                prepLabel = 'Первый Игрок объясняет';
-            } else {
-                prepLabel = 'Второй Игрок объясняет';
-                prepOptions = { title: 'Смена объясняющего' };
-                prepSeconds = 5;
-            }
-        }
-        startRoundPreparation(prepSeconds, prepLabel, () => {
+        const prepLabel = ftTurn ? `${ftTurn.team.name} — ${ftTurn.playerName}` : null;
+        startRoundPreparation(3, prepLabel, () => {
             startTimer();
             showCurrentWord();
-        }, prepOptions);
+        });
     }
     updatePairLegBadge();
 }
@@ -2959,7 +3051,10 @@ function updatePairLegBadge() {
     const badge = document.getElementById('pair-leg-badge');
     if (!badge) return;
     if (pairGameState.mode === 'pair' && gameState.isPlaying) {
-        badge.textContent = `Раунд ${pairGameState.currentLeg + 1} из 2`;
+        const circles = pairCircleCount();
+        const circle = Math.floor(pairGameState.currentLeg / 2) + 1;
+        const who = pairPlayerLabel(pairGameState.currentLeg);
+        badge.textContent = circles > 1 ? `Круг ${circle} из ${circles} · ${who}` : who;
         badge.classList.remove('hidden');
     } else {
         badge.classList.add('hidden');
@@ -2982,14 +3077,17 @@ function updateGameUI() {
         flexibleTournamentState.isFlexibleMode &&
         flexibleTournamentState.roundTeamIndices &&
         flexibleTournamentState.roundTeamIndices.length > 0;
+    const pairRound = pairGameState.mode === 'pair' && sid === 'game-screen';
     const wordStatWrap = document.getElementById('host-word-stat-wrap');
     if (wordStatWrap) {
         wordStatWrap.style.display = flexRound && sid === 'game-screen' ? 'none' : '';
     }
     if (skipLimWrap && skipLimVal) {
+        const skipLbl = skipLimWrap.querySelector('.stat-label');
+        if (skipLbl) skipLbl.textContent = pairRound ? 'Пропущено:' : 'Пропуски:';
         if (lim > 0) {
             skipLimWrap.style.display = '';
-            if (flexRound && sid === 'game-screen') {
+            if ((flexRound || pairRound) && sid === 'game-screen') {
                 const used = Math.max(0, lim - rem);
                 skipLimVal.textContent = `${used}/${lim}`;
             } else {
@@ -3004,7 +3102,10 @@ function updateGameUI() {
     }
     const gameStats = document.getElementById('host-game-stats');
     if (gameStats) {
-        gameStats.classList.toggle('host-game-stats--prominent', !!(flexRound && sid === 'game-screen'));
+        gameStats.classList.toggle(
+            'host-game-stats--prominent',
+            !!((flexRound || (pairRound && lim > 0)) && sid === 'game-screen')
+        );
     }
     if (skipBtn) {
         const skipLabel = document.getElementById('skip-btn-label');
@@ -3375,6 +3476,8 @@ window.resetThemeUsedWords = resetThemeUsedWords;
 window.getThemesForHallPicker = getThemesForHallPicker;
 window.startPairLeg2 = startPairLeg2;
 window.endPairGameEarly = endPairGameEarly;
+window.confirmPairLobby = confirmPairLobby;
+window.cancelPairLobby = cancelPairLobby;
 
 // Соревновательный режим API
 window.showCompetitiveSetup = showCompetitiveSetup;

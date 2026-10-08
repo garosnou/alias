@@ -962,7 +962,12 @@
                     : 'Тема: ' + state.themeName;
             }
             prepNameEl.textContent = prepNameText;
-            prepCountEl.textContent = state.prepCountdown || '';
+            var countText = state.prepCountdown || '';
+            prepCountEl.textContent = countText;
+            prepCountEl.classList.toggle(
+                'display-prep-count--phrase',
+                !!countText && !/^\d{1,3}$/.test(String(countText))
+            );
             applyGameBannerToDom(null);
             return;
         }
@@ -978,12 +983,19 @@
                 pairSwapEl.classList.remove('hidden');
                 var ps = state.pairSwap || {};
                 if (pairSwapPlayerEl) {
-                    pairSwapPlayerEl.textContent = ps.nextPlayerLabel || 'Второй Игрок';
+                    pairSwapPlayerEl.textContent = ps.nextPlayerLabel || 'Следующий игрок';
+                }
+                var scoreLbl = document.getElementById('display-pair-swap-score-lbl');
+                if (scoreLbl) {
+                    scoreLbl.textContent = ps.finishedLabel
+                        ? 'Счёт · ' + ps.finishedLabel
+                        : 'Счёт игрока';
                 }
                 if (pairSwapHintEl) {
+                    var waitWho = ps.nextPlayerLabel || 'следующего игрока';
                     pairSwapHintEl.textContent = state.themeName
-                        ? 'Тема: ' + state.themeName + ' · ожидание готовности второго игрока'
-                        : 'Ожидание готовности второго игрока';
+                        ? 'Тема: ' + state.themeName + ' · ожидание готовности: ' + waitWho
+                        : 'Ожидание готовности: ' + waitWho;
                 }
                 var correct = ps.leg1Correct != null ? ps.leg1Correct : 0;
                 var skipped = ps.leg1Skipped != null ? ps.leg1Skipped : 0;
@@ -1170,11 +1182,28 @@
                         '<span class="display-meta-chip-val">' +
                         String(correctN) +
                         '</span></div>';
+                    var skippedVal = String(skippedN);
+                    var skippedDepleted = false;
+                    if (pgHud && state.maxSkipsAllowed != null && state.maxSkipsAllowed > 0) {
+                        var maxSkPair = state.maxSkipsAllowed;
+                        var usedPair =
+                            state.skipsRemaining != null
+                                ? Math.max(0, maxSkPair - state.skipsRemaining)
+                                : skippedN;
+                        skippedVal =
+                            String(usedPair) +
+                            '<span class="display-meta-chip-max">/' +
+                            String(maxSkPair) +
+                            '</span>';
+                        skippedDepleted = state.skipsRemaining != null && state.skipsRemaining <= 0;
+                    }
                     var skippedChip =
-                        '<div class="display-meta-chip display-meta-chip--skipped" role="status">' +
+                        '<div class="display-meta-chip display-meta-chip--skipped' +
+                        (skippedDepleted ? ' display-meta-chip--skips-depleted' : '') +
+                        '" role="status">' +
                         '<span class="display-meta-chip-lbl">Пропущено</span>' +
                         '<span class="display-meta-chip-val">' +
-                        String(skippedN) +
+                        skippedVal +
                         '</span></div>';
                     metaEl.className = 'display-meta display-meta--hud';
                     metaEl.innerHTML =

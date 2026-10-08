@@ -180,7 +180,7 @@
                 <h3>Одиночная игра и игра на двоих</h3>
                 <ul>
                     <li><strong>Одиночная игра</strong> — один раунд по времени из настроек</li>
-                    <li><strong>Игра на двоих</strong> — два раунда подряд: сначала один объясняет, затем меняются ролями; общий счёт — сумма двух раундов</li>
+                    <li><strong>Игра на двоих</strong> — сначала экран подготовки первого игрока: можно задать лимит пропусков на игрока и число кругов. Один круг — каждый объясняет по одному разу, игроки чередуются. Общий счёт — сумма очков обоих</li>
                 </ul>
 
                 <h3>Подсчет очков:</h3>
@@ -194,15 +194,38 @@
         </div>
     </div>
 
+    <!-- Подготовка первого игрока: настройки режима -->
+    <div id="pair-lobby" class="screen">
+        <div class="container pair-swap-shell">
+            <h2>Подготовка первого игрока</h2>
+            <p class="hint pair-swap-lead">Настройте режим. На экране зала в это время ожидание старта. Когда первый игрок готов — нажмите кнопку ниже.</p>
+            <div class="pair-lobby-settings">
+                <div class="settings-group">
+                    <label for="pair-max-skips">Макс. пропусков на игрока (пусто = без лимита):</label>
+                    <input type="number" id="pair-max-skips" min="0" max="999" step="1" placeholder="без лимита" class="flexible-num-input">
+                </div>
+                <div class="settings-group">
+                    <label for="pair-circles">Количество кругов:</label>
+                    <input type="number" id="pair-circles" min="1" max="20" step="1" value="1" class="flexible-num-input">
+                    <p class="hint">Один круг — каждый игрок объясняет по одному разу. Игроки чередуются.</p>
+                </div>
+            </div>
+            <div class="pair-swap-actions">
+                <button type="button" class="btn btn-primary" onclick="confirmPairLobby()">Первый игрок готов — начать</button>
+                <button type="button" class="btn btn-secondary" onclick="cancelPairLobby()">Назад</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Пауза между раундами игры на двоих -->
     <div id="pair-swap-screen" class="screen">
         <div class="container pair-swap-shell">
-            <h2>Смена объясняющего</h2>
-            <p class="hint pair-swap-lead">Первый Игрок завершил раунд. Когда Второй Игрок готов — нажмите кнопку ниже (на экране зала тоже отображается ожидание).</p>
+            <h2 id="pair-swap-title">Смена объясняющего</h2>
+            <p class="hint pair-swap-lead" id="pair-swap-lead">Первый Игрок завершил раунд. Когда Второй Игрок готов — нажмите кнопку ниже (на экране зала тоже отображается ожидание).</p>
             <div class="pair-swap-summary">
                 <div class="pair-leg-cards">
                     <div class="pair-leg-card pair-leg-card--total">
-                        <div class="pair-leg-label">Первый Игрок</div>
+                        <div class="pair-leg-label" id="pair-swap-leg-label">Первый Игрок</div>
                         <div class="pair-leg-score" id="pair-swap-leg1-score">0</div>
                         <div class="pair-leg-meta" id="pair-swap-leg1-meta"></div>
                     </div>
@@ -219,7 +242,7 @@
                 </div>
             </div>
             <div class="pair-swap-actions">
-                <button type="button" class="btn btn-primary" onclick="startPairLeg2()">Второй Игрок готов — начать</button>
+                <button type="button" class="btn btn-primary" id="pair-swap-start-btn" onclick="startPairLeg2()">Второй Игрок готов — начать</button>
                 <button type="button" class="btn btn-secondary" onclick="endPairGameEarly()">Завершить игру</button>
             </div>
         </div>
