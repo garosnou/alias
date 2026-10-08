@@ -710,9 +710,15 @@ function isPackWordSource() {
     return settings.wordSource === 'custom' || settings.wordSource === 'themes';
 }
 
+function customCoverFromMeta(meta) {
+    const c = meta && typeof meta.cover === 'string' ? meta.cover : '';
+    return c.indexOf('data:') === 0 ? c : '';
+}
+
 function normalizeCustomWordsMeta(meta) {
+    const cover = customCoverFromMeta(meta);
     if (!meta || typeof meta !== 'object') {
-        return { packs: [], total: 0, fileName: null };
+        return { packs: [], total: 0, fileName: null, cover: '' };
     }
     if (Array.isArray(meta.packs) && meta.packs.length) {
         const packs = meta.packs.map((p) => ({
@@ -722,14 +728,21 @@ function normalizeCustomWordsMeta(meta) {
         return {
             packs,
             total: meta.total != null ? meta.total : 0,
-            fileName: meta.fileName || packs.map((p) => p.name).join(', ')
+            fileName: meta.fileName || packs.map((p) => p.name).join(', '),
+            cover
         };
     }
     if (meta.fileName) {
         const packs = [{ name: String(meta.fileName), count: Number(meta.total) || 0 }];
-        return { packs, total: meta.total || 0, fileName: meta.fileName };
+        return { packs, total: meta.total || 0, fileName: meta.fileName, cover };
     }
-    return { packs: [], total: 0, fileName: null };
+    return { packs: [], total: 0, fileName: null, cover };
+}
+
+function resolveRoundCover(themeMeta) {
+    if (settings.wordSource === 'themes' && themeMeta && themeMeta.cover) return themeMeta.cover;
+    if (settings.wordSource === 'custom') return customCoverFromMeta(CUSTOM_WORDS_META);
+    return '';
 }
 
 function persistCustomWordsStorage() {
@@ -739,7 +752,11 @@ function persistCustomWordsStorage() {
     } catch (_) {}
     try {
         localStorage.setItem('alias-custom-words-meta', JSON.stringify(CUSTOM_WORDS_META));
-    } catch (_) {}
+    } catch (_) {
+        if (customCoverFromMeta(CUSTOM_WORDS_META)) {
+            showNotification('Не удалось сохранить обложку (файл слишком большой?)');
+        }
+    }
     try {
         localStorage.setItem('alias-custom-words-used', JSON.stringify(Array.from(CUSTOM_WORDS_USED || [])));
     } catch (_) {}
@@ -750,11 +767,13 @@ function installCustomWordPacks(words, packs, options) {
     const resetUsed = !options || options.resetUsed !== false;
     CUSTOM_WORDS = words;
     const packList = Array.isArray(packs) ? packs : [];
+    const cover = options && options.clearCover ? '' : customCoverFromMeta(CUSTOM_WORDS_META);
     CUSTOM_WORDS_META = {
         packs: packList,
         total: words.length,
         fileName: packList.map((p) => p.name).join(', ') || 'custom.txt',
-        usedCount: 0
+        usedCount: 0,
+        cover
     };
     if (resetUsed) {
         CUSTOM_WORDS_USED = new Set();
@@ -780,6 +799,7 @@ function renderCustomPackList() {
     if (!CUSTOM_WORDS || !meta.packs.length) {
         list.innerHTML = '';
         list.classList.add('hidden');
+        updateCustomPackCoverRow();
         return;
     }
     list.classList.remove('hidden');
@@ -789,6 +809,92 @@ function renderCustomPackList() {
                 `<li><span class="custom-pack-list-name">${escapeHtmlFlexible(p.name)}</span> <span class="custom-pack-list-count">${p.count} сл.</span></li>`
         )
         .join('');
+    updateCustomPackCoverRow();
+}
+
+function updateCustomPackCoverRow() {
+    const row = document.getElementById('custom-pack-cover-row');
+    const thumb = document.getElementById('custom-pack-cover-thumb');
+    const btn = document.getElementById('custom-pack-cover-btn');
+    const note = document.getElementById('custom-pack-cover-note');
+    if (!row) return;
+    const hasPacks = !!(CUSTOM_WORDS && CUSTOM_WORDS.length);
+    row.classList.toggle('hidden', !hasPacks);
+    const cover = customCoverFromMeta(CUSTOM_WORDS_META);
+    if (thumb) {
+        if (cover) {
+            thumb.style.backgroundImage = `url("${cover.replace(/"/g, '%22')}")`;
+            thumb.classList.remove('theme-cover-thumb--empty');
+        } else {
+            thumb.style.backgroundImage = '';
+            thumb.classList.add('theme-cover-thumb--empty');
+        }
+    }
+    if (btn) {
+        btn.textContent = cover ? 'Убрать обложку' : 'Обложка';
+        btn.onclick = cover ? clearCustomPackCover : pickCustomPackCover;
+    }
+    if (note) {
+        note.textContent = cover ? 'Фон экрана зала · обложка задана' : 'Фон игрового экрана зала';
+    }
+}
+
+function syncCustomCoverToActiveGame() {
+    if (settings.wordSource !== 'custom' || !gameState) return;
+    gameState.themeCover = customCoverFromMeta(CUSTOM_WORDS_META);
+    gameState.themeName = null;
+}
+
+function pickCustomPackCover() {
+    if (!CUSTOM_WORDS || !CUSTOM_WORDS.length) {
+        showNotification('Сначала загрузите пакет со словами');
+        return;
+    }
+    const input = document.getElementById('custom-pack-cover-input');
+    if (input) input.click();
+}
+
+function clearCustomPackCover() {
+    if (!CUSTOM_WORDS_META) return;
+    CUSTOM_WORDS_META = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
+    CUSTOM_WORDS_META.cover = '';
+    persistCustomWordsStorage();
+    updateCustomPackCoverRow();
+    syncCustomCoverToActiveGame();
+    showNotification('Обложка убрана');
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function onCustomPackCoverFilePicked(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+    if (!CUSTOM_WORDS || !CUSTOM_WORDS.length) {
+        showNotification('Сначала загрузите пакет со словами');
+        return;
+    }
+    if (!file.type || file.type.indexOf('image/') !== 0) {
+        showNotification('Выберите файл изображения');
+        return;
+    }
+    if (file.size > THEME_COVER_MAX_FILE_BYTES) {
+        showNotification('Обложка слишком большая (макс. ~900 КБ). Сожмите изображение.');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function () {
+        CUSTOM_WORDS_META = normalizeCustomWordsMeta(CUSTOM_WORDS_META);
+        CUSTOM_WORDS_META.cover = String(reader.result || '');
+        persistCustomWordsStorage();
+        updateCustomPackCoverRow();
+        syncCustomCoverToActiveGame();
+        showNotification('Обложка пакета сохранена');
+        if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+    };
+    reader.onerror = function () {
+        showNotification('Не удалось прочитать файл обложки');
+    };
+    reader.readAsDataURL(file);
 }
 
 function openCustomWordPackDepletedOverlay() {
@@ -898,6 +1004,7 @@ function setupCustomPackControls() {
     const exportBtn = document.getElementById('export-unused-words-btn');
     const clearBtn = document.getElementById('clear-pack-btn');
     const input = document.getElementById('word-pack-input');
+    const coverInput = document.getElementById('custom-pack-cover-input');
 
     if (sourceBuiltin) {
         sourceBuiltin.addEventListener('change', () => {
@@ -959,7 +1066,7 @@ function setupCustomPackControls() {
         clearBtn.addEventListener('click', () => {
             CUSTOM_WORDS = null;
             localStorage.removeItem('alias-custom-words');
-            CUSTOM_WORDS_META = { packs: [], fileName: null, usedCount: 0, total: 0 };
+            CUSTOM_WORDS_META = { packs: [], fileName: null, usedCount: 0, total: 0, cover: '' };
             localStorage.removeItem('alias-custom-words-meta');
             CUSTOM_WORDS_USED = new Set();
             localStorage.removeItem('alias-custom-words-used');
@@ -970,6 +1077,8 @@ function setupCustomPackControls() {
             resetGameUI();
         });
     }
+
+    if (coverInput) coverInput.addEventListener('change', onCustomPackCoverFilePicked);
 
     updateCustomPackStatus();
     renderCustomPackList();
@@ -1867,7 +1976,7 @@ function startGame() {
             category: category,
             themeName: themeMeta ? themeMeta.name : null,
             themeId: themeMeta ? themeMeta.id : null,
-            themeCover: themeMeta && themeMeta.cover ? themeMeta.cover : '',
+            themeCover: resolveRoundCover(themeMeta),
             startTime: Date.now(),
             timerInterval: null,
             score: 0,
@@ -1907,7 +2016,7 @@ function startGame() {
         category: category,
         themeName: themeMeta ? themeMeta.name : null,
         themeId: themeMeta ? themeMeta.id : null,
-        themeCover: themeMeta && themeMeta.cover ? themeMeta.cover : '',
+        themeCover: resolveRoundCover(themeMeta),
         startTime: Date.now(),
         timerInterval: null,
         score: 0,
@@ -3472,6 +3581,8 @@ window.pickThemeAndStart = pickThemeAndStart;
 window.cancelThemePicker = cancelThemePicker;
 window.pickThemeCover = pickThemeCover;
 window.clearThemeCover = clearThemeCover;
+window.pickCustomPackCover = pickCustomPackCover;
+window.clearCustomPackCover = clearCustomPackCover;
 window.resetThemeUsedWords = resetThemeUsedWords;
 window.getThemesForHallPicker = getThemesForHallPicker;
 window.startPairLeg2 = startPairLeg2;

@@ -247,6 +247,18 @@ body.standalone-host .container {
     border-bottom: none;
 }
 
+.custom-pack-cover-row {
+    margin: 0.85rem 0 0.35rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.custom-pack-cover-row.hidden {
+    display: none;
+}
+
 .custom-pack-list-name {
     overflow: hidden;
     text-overflow: ellipsis;
