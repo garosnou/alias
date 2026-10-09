@@ -7,6 +7,8 @@
     var LS_KEY = 'alias-standalone-sync-v1';
     var bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL) : null;
     var msgSeq = 0;
+    /* Новая вкладка ведущего — новый сеанс. Иначе зал, уже открытый, отбрасывает кадры: счётчик _seq начинается с 1, а у зала последний номер ещё от прошлого сеанса. */
+    var hostSession = Date.now();
     var lastBannerRevSentWithSrc = -1;
     var lastThemeCoverSent = '';
     window.__aliasBannerForceSync = true;
@@ -646,7 +648,8 @@
             flash: p.flash,
             state: p.state,
             _ts: Date.now(),
-            _seq: msgSeq
+            _seq: msgSeq,
+            _session: hostSession
         };
         if (bc) {
             try {

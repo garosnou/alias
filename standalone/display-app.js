@@ -1367,9 +1367,20 @@
     var LS_KEY = 'alias-standalone-sync-v1';
     var lastSeq = 0;
     var lastAppliedTs = 0;
+    var lastSession = 0;
 
     function applyIncoming(d) {
         if (!d || d.type !== 'STATE' || !d.state) return;
+        if (typeof d._session === 'number') {
+            if (lastSession && d._session < lastSession) return;
+            if (d._session !== lastSession) {
+                lastSession = d._session;
+                lastSeq = 0;
+                lastAppliedTs = 0;
+            }
+        } else if (lastSession) {
+            return;
+        }
         if (typeof d._seq === 'number') {
             if (d._seq <= lastSeq) return;
             lastSeq = d._seq;
@@ -1380,7 +1391,13 @@
             else lastAppliedTs++;
         }
         if (d.flash) triggerFlash(d.flash);
-        setViews(d.state);
+        try {
+            setViews(d.state);
+        } catch (e) {
+            try {
+                showIdleScreen();
+            } catch (e2) {}
+        }
     }
 
     if (bc) {
