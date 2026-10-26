@@ -121,7 +121,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    flex-wrap: wrap;
+    gap: 0.65rem;
 }
 
 .menu-tournament-row .btn {
@@ -129,17 +130,24 @@ body {
 }
 
 .menu-download {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 0.78rem;
-    font-weight: 500;
+    min-width: 0;
+    padding: 0.85rem 1.05rem;
+    font-size: 0.98rem;
     line-height: 1;
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-    padding: 0.2rem 0.15rem;
+    color: #fff;
+    background: linear-gradient(135deg, #43a047, #2e7d32);
+    border: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
-.menu-download:hover {
-    color: rgba(255, 255, 255, 0.92);
+.menu-download[hidden] {
+    display: none;
+}
+
+.menu-download-icon {
+    width: 1.15em;
+    height: 1.15em;
+    flex: none;
 }
 
 /* Информация о последней игре */

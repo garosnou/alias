@@ -127,6 +127,39 @@ body.standalone-host .container {
     margin-bottom: 2rem;
 }
 
+.menu-tournament-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.menu-tournament-row .btn {
+    margin: 0;
+}
+
+.menu-download {
+    min-width: 0;
+    padding: 0.85rem 1.05rem;
+    font-size: 0.98rem;
+    line-height: 1;
+    color: #fff;
+    background: linear-gradient(135deg, #43a047, #2e7d32);
+    border: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.menu-download[hidden] {
+    display: none;
+}
+
+.menu-download-icon {
+    width: 1.15em;
+    height: 1.15em;
+    flex: none;
+}
+
 /* Информация о последней игре */
 .last-game-info {
     background: rgba(255,255,255,0.1);
