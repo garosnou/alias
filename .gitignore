@@ -31,6 +31,8 @@ target/
 # Editors
 .vscode/
 .idea/
+# FTP deploy sync state (CI)
+**/.ftp-deploy-sync-state*.json
 # System files
 .DS_Store
 Thumbs.db

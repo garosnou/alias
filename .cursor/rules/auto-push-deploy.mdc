@@ -31,6 +31,8 @@ alwaysApply: true
 ## Деплой
 
 - Триггер: push в `main` или ручной `workflow_dispatch` в Actions.
-- Перед FTP: `node scripts/gen-bg-manifest.js`, затем `node scripts/build-standalone-zip.js` → `standalone/download/alias.zip`.
-- На сервере актуальная portable-версия: **`standalone/download/alias.zip`** (см. правило `standalone`).
-- Секреты FTP — только в GitHub Secrets, не в репозитории.
+- Сборка турнирного пакета из `standalone/`: `npm run build` (`bg/manifest.*`, затем `standalone/download/alias.zip`). Ярлыки из корня — `node scripts/gen-bg-manifest.js` и `node scripts/build-standalone-zip.js`.
+- FTP теми же секретами, два шага:
+  1. Весь репозиторий в `${FTP_DIR}/`. Старый архив остаётся: **`/standalone/download/alias.zip`**.
+  2. Папка `standalone/` отдельно в `${FTP_DIR}/tournament/`. Игра в зале: **`/tournament/`** (ведущий), **`/tournament/display.html`** (зал), архив **`/tournament/download/alias.zip`**.
+- Секреты FTP — только в GitHub Secrets, не в репозитории. Новые секреты не добавлять. Подробности — правило `standalone`.

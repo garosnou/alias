@@ -1,0 +1,10 @@
+{
+  "name": "alias-tournament",
+  "private": true,
+  "description": "Турнирный режим Alias: панель ведущего и экран зала. Собирается и выкладывается отдельно от корня репозитория.",
+  "scripts": {
+    "bg": "node scripts/gen-bg-manifest.js",
+    "zip": "node scripts/build-zip.js",
+    "build": "node scripts/gen-bg-manifest.js && node scripts/build-zip.js"
+  }
+}

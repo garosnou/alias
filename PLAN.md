@@ -25,7 +25,7 @@ alias/
 ├── index.html          # Главная страница
 ├── styles.css          # Стили игры
 ├── script.js           # Основная логика
-├── words.js            # База слов
+├── standalone/words.js # База слов (единственная копия)
 ├── PLAN.md             # Этот файл
 └── README.md           # Описание игры
 ```

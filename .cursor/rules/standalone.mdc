@@ -1,51 +1,68 @@
 ---
-description: Standalone-версия — структура, сборка alias.zip и скачивание с сервера
-globs: standalone/**,scripts/build-standalone-zip.js,scripts/gen-bg-manifest.js
+description: Турнирный режим в standalone/ — сборка, архив и выкладка в /tournament/
+globs: standalone/**,scripts/build-standalone-zip.js,scripts/gen-bg-manifest.js,.github/workflows/deploy.yml
 alwaysApply: false
 ---
 
-# Standalone-версия (portable)
+# Турнир в зале (`standalone/`)
 
-Папка `standalone/` — автономная версия игры для запуска **с диска** (`file://`) без Node и без интернета во время игры.
+Папка `standalone/` — самодостаточный подпроект для игры с экраном в зале. Его можно собрать и выложить отдельно, не вынося в другой репозиторий. Игровой код не ссылается на файлы выше этой папки. Запуск с диска (`file://`) без Node и без интернета во время игры.
 
 ## Входные точки
 
+- `standalone/index.html` — сразу открывает панель ведущего (каталог `/standalone/` и `/tournament/`)
 - `standalone/host.html` — панель ведущего
-- `standalone/display.html` — экран зала (лучше открывать в отдельном окне через кнопку в host)
+- `standalone/display.html` — экран зала
 
-Синхронизация host ↔ display: `BroadcastChannel` + `localStorage` + `postMessage` (см. `host-bridge.js`).
+С диска зал открывают кнопкой из панели ведущего: `host-bridge.js` шлёт состояние в окно через `postMessage`, а также в `BroadcastChannel` и `localStorage`. Кнопка нужна, потому что не каждый браузер делит `file://` между двумя файлами. С одного `http://127.0.0.1/…` можно открыть `display.html` второй вкладкой.
 
-## Скачать последнюю версию с сервера
+## База слов
 
-После push в `main` на FTP выкладывается архив:
+Единственная копия — `standalone/words.js`. Корень подключает её из `index.html` (`standalone/words.js`). При сборке файл не копируется: папка должна собираться без родителя, а две копии расходятся.
 
-**`standalone/download/alias.zip`**
+## Сборка
 
-Относительно корня сайта на сервере — тот же путь, что в репозитории. Распаковать и запускать `host.html`.
+Из `standalone/`, без зависимостей:
 
-Пользователь может в любой момент скачать актуальную portable-сборку с продакшена, не клонируя репозиторий.
+```bash
+npm run build
+```
 
-## Сборка alias.zip
+- `npm run bg` — `scripts/gen-bg-manifest.js` → `bg/manifest.json` и `bg/manifest.js`
+- `npm run zip` — `scripts/build-zip.js` → `download/alias.zip`
 
-Скрипт: `node scripts/build-standalone-zip.js`  
-Результат: `standalone/download/alias.zip` (содержимое `standalone/` без `download/` и `PLAN.md`).
+Архив — содержимое папки для игры с диска, без `download/`, `scripts/`, `package.json`, `PLAN.md` и `.gitignore`.
+
+Ярлыки из корня репозитория: `node scripts/gen-bg-manifest.js` и `node scripts/build-standalone-zip.js`. Они только вызывают скрипты внутри `standalone/`.
 
 **Когда пересобирать и коммитить архив:**
 
 - после заметных правок в `standalone/` (HTML, JS, CSS, `bg/`, настройки зала);
 - перед push, если менялся код standalone — архив должен попасть в тот же коммит (CI тоже пересоберёт, но в репо должен лежать актуальный zip).
 
-CI (`.github/workflows/deploy.yml`) перед FTP всегда запускает:
+## Выкладка
 
-1. `node scripts/gen-bg-manifest.js`
-2. `node scripts/build-standalone-zip.js`
+CI (`.github/workflows/deploy.yml`) на push в `main`:
+
+1. `npm run build` в `standalone/`
+2. Весь репозиторий в `${{ secrets.FTP_DIR }}/` — старый архив остаётся по адресу **`/standalone/download/alias.zip`**
+3. Папка `standalone/` отдельным шагом в `${{ secrets.FTP_DIR }}/tournament/`
+
+Публичные адреса зала:
+
+- панель ведущего — **`/tournament/`**
+- экран зала — **`/tournament/display.html`**
+- архив — **`/tournament/download/alias.zip`**
+
+Новые секреты не добавлять. Серверные настройки и `.htaccess` не трогать: старый путь архива — это тот же файл со шага 2, редирект не нужен.
 
 ## Фоны и баннер зала
 
-- Фоны «Подготовка турнира»: папка `standalone/bg/`, список в `manifest.js` (для `file://`) и `manifest.json` (для HTTP). Обновление списка: `node scripts/gen-bg-manifest.js` или «Обновить фоны» в настройках host.
+- Фоны «Подготовка турнира»: папка `standalone/bg/`, список в `manifest.js` (для `file://`) и `manifest.json` (для HTTP). Обновление: `npm run bg` из `standalone/` или «Обновить фоны» в настройках host.
 - Баннер игры: настройки host → файл сохраняется в `localStorage`, синхронизируется на display.
 
 ## Ограничения
 
 - Не подключать внешние CDN в standalone — только локальные файлы.
 - Большие бинарники в `bg/` учитывать в размере `alias.zip`.
+- Не дублировать `words.js` в корне.

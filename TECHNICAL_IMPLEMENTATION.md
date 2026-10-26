@@ -8,7 +8,7 @@ alias/
 ├── index.html          # UI и структура экранов
 ├── script.js           # Основная логика игры
 ├── styles.css          # Стили и анимации
-├── words.js            # База встроенных слов
+├── standalone/words.js # База встроенных слов (единственная копия)
 ├── README.md           # Общая документация
 └── TECHNICAL_IMPLEMENTATION.md  # Этот файл
 ```
@@ -166,7 +166,7 @@ if (tournamentState.currentPlayerIndex >= totalTurns) {
 
 ### Источники слов
 
-#### Встроенная база (`words.js`)
+#### Встроенная база (`standalone/words.js`)
 ```javascript
 const WORDS_DATABASE = {
     general: ["слово1", "слово2", ...],
