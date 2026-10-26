@@ -60,6 +60,9 @@
     var idleBgLoadSeq = 0;
     var lastIdleBgState = null;
     var HALL_BG_STORAGE_KEY = 'alias-standalone-bg-files-v1';
+    var HALL_BG_CHOICE_KEY = 'alias-standalone-bg-choice-v1';
+    var idleBgShownFile = '';
+    var idleBgAppliedKey = '';
     var cachedGameBannerRev = 0;
     var cachedGameBannerSrc = '';
     var lastGameBannerPanel = null;
@@ -87,16 +90,60 @@
         return 'bg/' + encodeURIComponent(fileName);
     }
 
+    function showIdleBgFile(file) {
+        if (!idleBgEl || !file) return;
+        idleBgEl.style.backgroundImage = "url('" + idleBgAssetUrl(file) + "')";
+        idleBgEl.hidden = false;
+        idleBgShownFile = file;
+    }
+
     function pickRandomIdleBg() {
         if (!idleBgEnabled || !idleBgPool.length || !idleBgEl) return;
         var file = idleBgPool[Math.floor(Math.random() * idleBgPool.length)];
-        idleBgEl.style.backgroundImage = "url('" + idleBgAssetUrl(file) + "')";
-        idleBgEl.hidden = false;
+        showIdleBgFile(file);
+    }
+
+    function normalizeIdleBgChoice(choice, list) {
+        var name = String(choice || '').trim();
+        if (!name || name === 'random') return 'random';
+        var base = name.replace(/\\/g, '/').split('/').pop();
+        if (!base || !list || list.indexOf(base) < 0) return 'random';
+        return base;
+    }
+
+    function readIdleBgChoice(state, list) {
+        var choice = state && state.idleBgChoice;
+        if (!choice) {
+            try {
+                choice = localStorage.getItem(HALL_BG_CHOICE_KEY);
+            } catch (e) {}
+        }
+        return normalizeIdleBgChoice(choice, list);
+    }
+
+    function applyIdleBgSelection(list, choice) {
+        var wanted = normalizeIdleBgChoice(choice, list);
+        var key = wanted + '\n' + list.join('\n');
+        if (wanted !== 'random') {
+            if (idleBgShownFile === wanted) {
+                idleBgAppliedKey = key;
+                showIdleBgFile(wanted);
+                return;
+            }
+            showIdleBgFile(wanted);
+            idleBgAppliedKey = key;
+            return;
+        }
+        if (idleBgAppliedKey === key && idleBgShownFile && list.indexOf(idleBgShownFile) >= 0) return;
+        pickRandomIdleBg();
+        idleBgAppliedKey = key;
     }
 
     function disableIdleBgMode() {
         idleBgPool = [];
         idleBgEnabled = false;
+        idleBgShownFile = '';
+        idleBgAppliedKey = '';
         if (idleEl) idleEl.classList.remove('display-idle--has-bg');
         if (idleBgEl) {
             idleBgEl.style.backgroundImage = '';
@@ -104,11 +151,11 @@
         }
     }
 
-    function enableIdleBgMode(list) {
+    function enableIdleBgMode(list, choice) {
         idleBgPool = list.slice();
         idleBgEnabled = true;
         if (idleEl) idleEl.classList.add('display-idle--has-bg');
-        pickRandomIdleBg();
+        applyIdleBgSelection(idleBgPool, choice);
     }
 
     function parseBgDirectoryListing(html) {
@@ -237,7 +284,8 @@
 
     function loadIdleBackgrounds(onDone, state) {
         var seq = ++idleBgLoadSeq;
-        fetchBgImageList(state || lastIdleBgState)
+        var source = state || lastIdleBgState;
+        fetchBgImageList(source)
             .then(function (list) {
                 return verifyBgImageList(list);
             })
@@ -247,7 +295,7 @@
                     disableIdleBgMode();
                     return;
                 }
-                enableIdleBgMode(list);
+                enableIdleBgMode(list, readIdleBgChoice(source, list));
             })
             .catch(function () {
                 if (seq !== idleBgLoadSeq) return;

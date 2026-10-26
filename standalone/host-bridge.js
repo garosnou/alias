@@ -614,7 +614,9 @@
                 awaitingCustomWordPack: !!(gs && gs.awaitingCustomWordPack),
                 finalWordPhase: !!(gs && gs.finalWordPhase),
                 idleBgFiles:
-                    typeof getHallBgFileList === 'function' ? getHallBgFileList() : []
+                    typeof getHallBgFileList === 'function' ? getHallBgFileList() : [],
+                idleBgChoice:
+                    typeof getHallBgChoice === 'function' ? getHallBgChoice() : 'random'
             }
         };
     }
