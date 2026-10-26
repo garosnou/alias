@@ -20,7 +20,10 @@
             
             <div class="menu-buttons">
                 <button class="btn btn-primary" onclick="startGame()">Начать игру</button>
-                <button class="btn btn-primary" onclick="showTournamentSetup()">Турнирный режим</button>
+                <div class="menu-tournament-row">
+                    <button class="btn btn-primary" onclick="showTournamentSetup()">Турнирный режим</button>
+                    <a class="menu-download" href="/tournament/download/alias.zip" download="alias.zip" title="Офлайн-архив турнирной версии">Скачать</a>
+                </div>
                 <button class="btn btn-primary" onclick="showCompetitiveSetup()">Соревновательный режим</button>
                 <button class="btn btn-secondary" onclick="showSettings()">Настройки</button>
                 <button class="btn btn-secondary" onclick="showRules()">Правила</button>

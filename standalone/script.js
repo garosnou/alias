@@ -113,6 +113,12 @@ let flexibleTournamentState = {
 
 const FLEXIBLE_STORAGE_KEY = 'alias-standalone-flexible-v1';
 const HALL_BG_STORAGE_KEY = 'alias-standalone-bg-files-v1';
+const HALL_BG_CHOICE_KEY = 'alias-standalone-bg-choice-v1';
+const HALL_BG_LABELS = {
+    'antic.jpg': 'Античный',
+    'anime.jpg': 'Аниме',
+    'steampunk.jpg': 'Стимпанк'
+};
 const GAME_BANNER_STORAGE_KEY = 'alias-standalone-game-banner-v1';
 const GAME_BANNER_MAX_FILE_BYTES = 1200000;
 const THEME_COVER_MAX_FILE_BYTES = 900000;
@@ -1379,6 +1385,77 @@ function getHallBgFileList() {
     return out;
 }
 
+function hallBgChoiceLabel(name) {
+    const key = String(name || '').toLowerCase();
+    if (HALL_BG_LABELS[key]) return HALL_BG_LABELS[key];
+    return String(name || '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ') || 'Фон';
+}
+
+function getHallBgChoice() {
+    let choice = 'random';
+    try {
+        const raw = localStorage.getItem(HALL_BG_CHOICE_KEY);
+        if (raw) choice = String(raw);
+    } catch (_) {}
+    if (choice !== 'random' && !getHallBgFileList().includes(choice)) {
+        choice = 'random';
+        try {
+            localStorage.setItem(HALL_BG_CHOICE_KEY, choice);
+        } catch (_) {}
+    }
+    return choice;
+}
+
+function pushHallBackgroundSync() {
+    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+}
+
+function setHallBgChoice(choice) {
+    const list = getHallBgFileList();
+    const next = choice && choice !== 'random' && list.includes(choice) ? choice : 'random';
+    try {
+        localStorage.setItem(HALL_BG_CHOICE_KEY, next);
+    } catch (_) {}
+    renderHallBgChoice();
+    pushHallBackgroundSync();
+}
+
+function renderHallBgChoice() {
+    const root = document.getElementById('hall-bg-choice');
+    if (!root) return;
+    const list = getHallBgFileList();
+    const current = getHallBgChoice();
+    const items = [{ id: 'random', label: 'Случайный', file: '' }].concat(
+        list.map((name) => ({ id: name, label: hallBgChoiceLabel(name), file: name }))
+    );
+    root.textContent = '';
+    items.forEach((item) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hall-bg-option' + (item.id === current ? ' is-selected' : '');
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', item.id === current ? 'true' : 'false');
+        btn.setAttribute('aria-label', item.file ? item.label + ', ' + item.file : item.label);
+        if (item.file) {
+            const img = document.createElement('img');
+            img.alt = '';
+            img.src = 'bg/' + encodeURIComponent(item.file);
+            btn.appendChild(img);
+        } else {
+            const mark = document.createElement('span');
+            mark.className = 'hall-bg-option-random';
+            mark.setAttribute('aria-hidden', 'true');
+            btn.appendChild(mark);
+        }
+        const cap = document.createElement('span');
+        cap.className = 'hall-bg-option-label';
+        cap.textContent = item.label;
+        btn.appendChild(cap);
+        btn.addEventListener('click', () => setHallBgChoice(item.id));
+        root.appendChild(btn);
+    });
+}
+
 function updateHallBgStatus() {
     const el = document.getElementById('hall-bg-status');
     if (!el) return;
@@ -1418,8 +1495,9 @@ function onHallBackgroundFilesPicked(ev) {
         localStorage.setItem(HALL_BG_STORAGE_KEY, JSON.stringify(names));
     } catch (_) {}
     updateHallBgStatus();
+    renderHallBgChoice();
     showNotification('Список фонов обновлён: ' + names.length);
-    if (typeof window.__aliasStandaloneHostPush === 'function') window.__aliasStandaloneHostPush(null);
+    pushHallBackgroundSync();
     ev.target.value = '';
 }
 
@@ -1429,6 +1507,7 @@ function setupHallBackgroundControls() {
     if (btn) btn.addEventListener('click', pickHallBackgroundFiles);
     if (inp) inp.addEventListener('change', onHallBackgroundFilesPicked);
     updateHallBgStatus();
+    renderHallBgChoice();
 }
 
 function builtinCategoryName(key) {
