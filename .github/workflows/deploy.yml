@@ -12,13 +12,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate hall background manifest
-        run: node scripts/gen-bg-manifest.js
+      - name: Build tournament package
+        working-directory: standalone
+        run: npm run build
 
-      - name: Build standalone download zip
-        run: node scripts/build-standalone-zip.js
-
-      - name: Deploy to FTP
+      - name: Deploy site to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -28,6 +26,7 @@ jobs:
           port: 21
           server-dir: ${{ secrets.FTP_DIR }}/
           local-dir: ./
+          state-name: .ftp-deploy-sync-state-site.json
           dangerous-clean-slate: false
           exclude: |
             **/.git/**
@@ -41,4 +40,30 @@ jobs:
             **/TECHNICAL_IMPLEMENTATION.md
             **/TOURNAMENT_README.md
             **/*.code-workspace
+            **/.ftp-deploy-sync-state*.json
 
+      # Игра в зале — отдельным шагом в /tournament/ (тот же FTP, без новых секретов).
+      # /standalone/download/alias.zip остаётся на шаге выше: это тот же архив.
+      - name: Deploy tournament to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          server-dir: ${{ secrets.FTP_DIR }}/tournament/
+          local-dir: ./standalone/
+          state-name: .ftp-deploy-sync-state-tournament.json
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git/**
+            **/.git
+            **/node_modules/**
+            **/.DS_Store
+            **/PLAN.md
+            **/scripts/**
+            **/package.json
+            **/package-lock.json
+            **/.gitignore
+            **/.ftp-deploy-sync-state*.json
